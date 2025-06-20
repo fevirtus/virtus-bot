@@ -1,131 +1,94 @@
 import discord
-from datetime import datetime
-from core.bot import bot, server_repo, channel_repo, channel_app_repo, home_debt_repo
-from models import DiscordServer, DiscordChannel, DiscordChannelApp
+from typing import Any
+from core.bot import bot, server_repo, channel_repo, home_debt_repo
 
 @bot.tree.command(name='set-home-debt', description='Set channel to home debt')
 async def set_home_debt(interaction: discord.Interaction, channel: discord.TextChannel):
     try:
-        # Get or create server
+        # Kiểm tra xem người dùng có quyền admin không
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("Bạn cần có quyền Administrator để sử dụng lệnh này!", ephemeral=True)
+            return
+
+        # Ensure server is in database
         server = await server_repo.get(str(interaction.guild_id))
         if not server:
-            server = DiscordServer(
-                id=str(interaction.guild_id),
-                name=interaction.guild.name,
-                created_at=datetime.now(),
-                updated_at=datetime.now()
-            )
-            server = await server_repo.create(server)
+            await interaction.response.send_message("Server chưa được khởi tạo trong database! Vui lòng sử dụng lệnh /init_server trước.", ephemeral=True)
+            return
 
-        # Get or create channel
-        discord_channel = await channel_repo.get(str(channel.id))
+        # Ensure channel was registered in database
+        discord_channel = await channel_repo.get_channel(channel.id)
         if not discord_channel:
-            discord_channel = DiscordChannel(
-                id=str(channel.id),
-                server_id=str(interaction.guild_id),
-                name=channel.name,
-                type='text',
-                created_at=datetime.now(),
-                updated_at=datetime.now()
-            )
-            discord_channel = await channel_repo.create(discord_channel)
-
-        # Create or update home debt app
-        apps = await channel_app_repo.get_by_channel(str(channel.id))
-        home_debt_app = next((app for app in apps if app.app_type == 'home_debt'), None)
-        
-        if home_debt_app:
-            home_debt_app.config = {'enabled': True}
-            await channel_app_repo.update(home_debt_app)
+            await channel_repo.create_channel(interaction.guild_id, channel.id, 'home_debt')
         else:
-            home_debt_app = DiscordChannelApp(
-                id=f"{channel.id}_home_debt",
-                channel_id=str(channel.id),
-                app_type='home_debt',
-                config={'enabled': True},
-                created_at=datetime.now(),
-                updated_at=datetime.now()
-            )
-            await channel_app_repo.create(home_debt_app)
+            await channel_repo.update_channel(channel.id, 'home_debt')
 
-        await interaction.response.send_message(f"Home debt app has been set up for {channel.mention}")
+        await interaction.response.send_message(f"home_debt app đã được cấu hình cho {channel.mention}")
     except Exception as e:
-        await interaction.response.send_message(f"Error setting up home debt app: {str(e)}")
+        await interaction.response.send_message(f"Lỗi khi cấu hình home_debt app: {str(e)}")
 
-@bot.tree.command(name="add_member", description="Thêm thành viên mới vào nhà")
-async def add_member(interaction: discord.Interaction, member: discord.Member):
-    """Thêm thành viên mới vào nhà"""
+# Decorator to check if the channel is registered and configured for home_debt app
+def check_channel_home_debt():
+    def decorator(func):
+        async def wrapper(interaction: discord.Interaction, *args, **kwargs):
+            channel = await channel_repo.get_channel(interaction.channel_id)
+            if not channel:
+                await interaction.response.send_message("Channel chưa được đăng ký!", ephemeral=True)
+                return
+            if channel.app != 'home_debt':
+                await interaction.response.send_message("Lệnh này chỉ có thể sử dụng trong channel đã được cấu hình cho home_debt app!", ephemeral=True)
+                return
+            await func(interaction, *args, **kwargs)
+        return wrapper
+    return decorator
+
+@bot.tree.command(name="home-debt-add", description="Thêm khoản chi tiêu mới")
+# @check_channel_home_debt()
+async def home_debt_add(interaction: discord.Interaction, amount: float, description: str):
+    """Vì home chỉ có 2 người nên sẽ tự động thêm khoản chi tiêu cho người còn lại"""
     try:
-        # Kiểm tra xem thành viên đã tồn tại chưa
-        existing_member = await home_debt_repo.get_member(member.id)
-        if existing_member:
-            await interaction.response.send_message(f"Thành viên {member.name} đã tồn tại trong hệ thống!", ephemeral=True)
-            return
-
-        # Thêm thành viên mới
-        await home_debt_repo.add_member(member.id, member.name)
-        await interaction.response.send_message(f"Đã thêm thành viên {member.name} vào hệ thống!", ephemeral=True)
+        # Get info other user from home_debt table
+        other_user = await home_debt_repo.get_other(interaction.user.id)
+        other_user.value += amount / 2
+        await home_debt_repo.update_home_debt(other_user)
+        await interaction.response.send_message(f"Đã thêm khoản chi tiêu: {description} - {amount / 2}đ cho {other_user.user_id}", ephemeral=False)
     except Exception as e:
         await interaction.response.send_message(f"Có lỗi xảy ra: {str(e)}", ephemeral=True)
 
-@bot.tree.command(name="add_expense", description="Thêm khoản chi tiêu mới")
-async def add_expense(interaction: discord.Interaction, amount: float, description: str):
-    """Thêm khoản chi tiêu mới"""
+@bot.tree.command(name="home-debt-check", description="Kiểm tra số dư của bạn")
+async def home_debt_check(interaction: discord.Interaction):
+    """Kiểm tra số dư của mọi người"""
     try:
-        # Kiểm tra xem người dùng có phải là thành viên không
-        member = await home_debt_repo.get_member(interaction.user.id)
-        if not member:
-            await interaction.response.send_message("Bạn chưa được thêm vào hệ thống! Vui lòng sử dụng lệnh /add_member trước.", ephemeral=True)
-            return
-
-        # Thêm khoản chi tiêu
-        expense = await home_debt_repo.add_expense(amount, description, interaction.user.id)
-        await interaction.response.send_message(f"Đã thêm khoản chi tiêu: {description} - {amount}đ", ephemeral=True)
+        # Lấy số dư của mọi người
+        home_debts = await home_debt_repo.get_all()
+        await interaction.response.send_message(f"Số dư của mọi người: {home_debts}", ephemeral=True)
     except Exception as e:
         await interaction.response.send_message(f"Có lỗi xảy ra: {str(e)}", ephemeral=True)
 
-@bot.tree.command(name="check_balance", description="Kiểm tra số dư của bạn")
-async def check_balance(interaction: discord.Interaction):
-    """Kiểm tra số dư của bạn"""
+@bot.tree.command(name="vay-debt", description="Vay nợ")
+async def vay_debt(interaction: discord.Interaction, amount: float, description: str):
+    """Vay nợ"""
     try:
-        # Kiểm tra xem người dùng có phải là thành viên không
-        member = await home_debt_repo.get_member(interaction.user.id)
-        if not member:
-            await interaction.response.send_message("Bạn chưa được thêm vào hệ thống! Vui lòng sử dụng lệnh /add_member trước.", ephemeral=True)
-            return
+        # Get info user from home_debt table
+        user = await home_debt_repo.get(interaction.user.id)
+        user.value += amount
+        await home_debt_repo.update_home_debt(user)
 
-        # Lấy số dư
-        balance = await home_debt_repo.get_balance(interaction.user.id)
-        await interaction.response.send_message(f"Số dư của bạn: {balance}đ", ephemeral=True)
+        # Send message to user
+        await interaction.response.send_message(f"Đã vay nợ: {description} - {amount}đ cho {user.user_id}", ephemeral=False)
     except Exception as e:
         await interaction.response.send_message(f"Có lỗi xảy ra: {str(e)}", ephemeral=True)
 
-@bot.tree.command(name="list_expenses", description="Xem danh sách chi tiêu")
-async def list_expenses(interaction: discord.Interaction):
-    """Xem danh sách chi tiêu"""
+@bot.tree.command(name="tra-debt", description="Trả nợ")
+async def tra_debt(interaction: discord.Interaction, amount: float):
+    """Trả nợ"""
     try:
-        # Kiểm tra xem người dùng có phải là thành viên không
-        member = await home_debt_repo.get_member(interaction.user.id)
-        if not member:
-            await interaction.response.send_message("Bạn chưa được thêm vào hệ thống! Vui lòng sử dụng lệnh /add_member trước.", ephemeral=True)
-            return
+        # Get info user from home_debt table
+        user = await home_debt_repo.get(interaction.user.id)
+        user.value -= amount
+        await home_debt_repo.update_home_debt(user)
 
-        # Lấy danh sách chi tiêu
-        expenses = await home_debt_repo.get_expenses()
-        if not expenses:
-            await interaction.response.send_message("Chưa có khoản chi tiêu nào!", ephemeral=True)
-            return
-
-        # Tạo embed message
-        embed = discord.Embed(title="Danh sách chi tiêu", color=discord.Color.blue())
-        for expense in expenses:
-            member = await home_debt_repo.get_member(expense.member_id)
-            embed.add_field(
-                name=f"{expense.description} - {expense.amount}đ",
-                value=f"Người chi: {member.name}",
-                inline=False
-            )
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        # Send message to user
+        await interaction.response.send_message(f"Đã trả nợ: {amount}đ cho {user.user_id}", ephemeral=False)
     except Exception as e:
-        await interaction.response.send_message(f"Có lỗi xảy ra: {str(e)}", ephemeral=True) 
+        await interaction.response.send_message(f"Có lỗi xảy ra: {str(e)}", ephemeral=True)

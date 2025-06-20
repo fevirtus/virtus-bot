@@ -1,28 +1,18 @@
 import discord
-from datetime import datetime
-from core.bot import bot, server_repo, channel_repo, channel_app_repo
-from models import DiscordServer, DiscordChannel, DiscordChannelApp
-
-@bot.tree.command(name='test', description='Test command')
-async def test(interaction: discord.Interaction):
-    try:
-        # Get server
-        server = await server_repo.get(str(interaction.guild_id))
-        if server:
-            await interaction.response.send_message(f"Server: {server.name}")
-        else:
-            await interaction.response.send_message("Server not found")
-    except Exception as e:
-        await interaction.response.send_message(f"Error: {e}")
+from core.bot import bot, server_repo
 
 @bot.tree.command(name='help', description='Show help')
 async def help(interaction: discord.Interaction):
-    embed = discord.Embed(title="Help", description="Here is a list of commands you can use:")
-    embed.add_field(name="!exp", value="Show your experience points", inline=True)
-    embed.add_field(name="!test", value="Test command", inline=True)
-    embed.add_field(name="!help", value="Show help", inline=True)
-    embed.add_field(name="!set-home-debt", value="Set channel to home debt", inline=True)
-    await interaction.response.send_message(embed=embed)
+    """Command để hiển thị danh sách các lệnh"""
+    # Get all commands
+    commands = bot.tree.get_commands()
+    command_list = "\n".join([f"• {c.name}: {c.description}" for c in commands])
+
+    # Create embed with command list
+    embed = discord.Embed(title="Help", description="Đây là danh sách các lệnh bạn có thể sử dụng:")
+    embed.add_field(name="Danh sách lệnh", value=command_list, inline=False)
+    await interaction.response.send_message(embed=embed, ephemeral=False)
+    print(f"Đã gửi lệnh help cho {interaction.user.name}")
 
 @bot.tree.command(name="init_server", description="Khởi tạo thông tin server trong database")
 async def init_server(interaction: discord.Interaction):
