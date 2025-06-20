@@ -1,7 +1,7 @@
 import discord
-from typing import Any
 from core.bot import bot, server_repo, channel_repo, home_debt_repo
 
+@discord.app_commands.guilds(discord.Object(id=536422615649091595))
 @bot.tree.command(name='set-home-debt', description='Set channel to home debt')
 async def set_home_debt(interaction: discord.Interaction, channel: discord.TextChannel):
     try:
@@ -55,6 +55,7 @@ async def home_debt_add(interaction: discord.Interaction, amount: float, descrip
     except Exception as e:
         await interaction.response.send_message(f"Có lỗi xảy ra: {str(e)}", ephemeral=True)
 
+@discord.app_commands.guilds(discord.Object(id=536422615649091595))
 @bot.tree.command(name="home-debt-check", description="Kiểm tra số dư của bạn")
 async def home_debt_check(interaction: discord.Interaction):
     """Kiểm tra số dư của mọi người"""
@@ -65,6 +66,7 @@ async def home_debt_check(interaction: discord.Interaction):
     except Exception as e:
         await interaction.response.send_message(f"Có lỗi xảy ra: {str(e)}", ephemeral=True)
 
+@discord.app_commands.guilds(discord.Object(id=536422615649091595))
 @bot.tree.command(name="vay-debt", description="Vay nợ")
 async def vay_debt(interaction: discord.Interaction, amount: float, description: str):
     """Vay nợ"""
@@ -79,6 +81,7 @@ async def vay_debt(interaction: discord.Interaction, amount: float, description:
     except Exception as e:
         await interaction.response.send_message(f"Có lỗi xảy ra: {str(e)}", ephemeral=True)
 
+@discord.app_commands.guilds(discord.Object(id=536422615649091595))
 @bot.tree.command(name="tra-debt", description="Trả nợ")
 async def tra_debt(interaction: discord.Interaction, amount: float):
     """Trả nợ"""
