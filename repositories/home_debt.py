@@ -41,7 +41,7 @@ class HomeDebtRepository:
     async def update_home_debt(self, home_debt: DiscordHomeDebt) -> Optional[DiscordHomeDebt]:
         """Cập nhật khoản nợ"""
         try:
-            response = self.table.update(home_debt.dict(exclude_none=True)).eq('user_id', home_debt.user_id).execute()
+            response = self.table.update(home_debt.to_dict()).eq('user_id', home_debt.user_id).execute()
             return DiscordHomeDebt(**response.data[0])
         except Exception as e:
             print(f"Error updating home debt: {e}")

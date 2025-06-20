@@ -10,7 +10,7 @@ class ChannelRepository:
         try:
             response = self.table.select('*').eq('channel_id', channel_id).execute()
             if response.data:
-                return DiscordChannel(**response.data[0])
+                return DiscordChannel.model_validate(response.data[0])
             return None
         except Exception as e:
             print(f"Error getting channel: {e}")

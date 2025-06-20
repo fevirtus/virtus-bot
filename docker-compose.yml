@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  virtus-bot:
+    build: .
+    container_name: virtus-bot
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      # Mount logs directory nếu cần
+      - ./logs:/app/logs
+    # Không cần expose port vì Discord bot không cần HTTP server
+    # ports:
+    #   - "8000:8000" 

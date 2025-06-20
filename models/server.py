@@ -17,3 +17,6 @@ class DiscordServer(BaseModel):
             'server_id': self.server_id,
             'name': self.name
         }
+    
+    def to_json(self):
+        return self.model_dump_json(exclude_none=True)

@@ -9,3 +9,13 @@ class DiscordChannel(BaseModel):
     server_id: int
     channel_id: int
     app: str 
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "server_id": self.server_id,
+            "channel_id": self.channel_id,
+            "app": self.app
+        }
