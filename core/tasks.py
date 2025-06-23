@@ -15,8 +15,3 @@ from core.bot import bot
 #                 await user_repo.update_exp(user_id, new_exp)
 #                 await user_repo.update_voice_time(user_id, current_time.isoformat())
 #                 print(f"Thêm {VOICE_EXP_POINTS_PER_MINUTE} điểm kinh nghiệm cho user {user_id} cho thời gian voice") 
-
-@tasks.loop(minutes=1)
-async def sync_commands():
-    await bot.tree.sync()
-    print("Đã đồng bộ lệnh!")

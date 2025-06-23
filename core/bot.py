@@ -16,12 +16,13 @@ intents.guilds = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Initialize repositories
-from repositories import ServerRepository, ChannelRepository, ChannelAppRepository, HomeDebtRepository
+from repositories import ServerRepository, ChannelRepository, ChannelAppRepository, HomeDebtRepository, CurrencyRepository
 
 server_repo = ServerRepository()
 channel_repo = ChannelRepository()
 channel_app_repo = ChannelAppRepository()
 home_debt_repo = HomeDebtRepository()
+currency_repo = CurrencyRepository()
 
 # Store user cooldowns
 from typing import Dict, Set
