@@ -5,6 +5,7 @@ from core.bot import bot
 from discord.ext import commands
 from typing import Dict, Set, Optional
 from datetime import datetime, timedelta
+import threading
 
 # Lazy load repository để tránh lỗi database connection
 noi_tu_repo = None
@@ -34,6 +35,7 @@ class NoiTuGame:
         self.timer_message = None  # Tin nhắn hiển thị thời gian
         self.timer_task = None     # Task cập nhật thời gian
         self.start_time = None     # Thời gian bắt đầu game
+        self.lock = threading.Lock()
 
 # Khởi tạo game state
 game = NoiTuGame()
@@ -51,6 +53,9 @@ def get_first_word(word: str) -> str:
 
 def get_last_word(word: str) -> str:
     return word.strip().split()[-1] if word else ''
+
+def is_valid(prev, next: str) -> bool:
+    return get_last_word(prev) == get_first_word(next)
 
 def format_time_remaining(seconds: int) -> str:
     """Format thời gian còn lại"""
@@ -324,6 +329,8 @@ async def handle_game_message(message):
     
     # Kiểm tra xem tin nhắn có phải là từ không
     word = message.content.strip().lower()
+    if len(word.split()) != 2:
+        return
     
     # Kiểm tra từ có hợp lệ không
     if not await get_noi_tu_repo().is_valid_word(word):
@@ -331,14 +338,11 @@ async def handle_game_message(message):
     
     # Kiểm tra người vừa trả lời có trả lời tiếp không
     if game.last_player_id == message.author.id:
-        await message.add_reaction('❌')
-        await message.channel.send(f"❌ **{message.author.display_name}**, hãy để người khác trả lời!")
+        # ignore
+        # await message.add_reaction('❌')
+        # await message.channel.send(f"❌ **{message.author.display_name}**, hãy để người khác trả lời!")
         return
     
-    # Kiểm tra từ có tồn tại trong DB không
-    if not await get_noi_tu_repo().is_exist(word):
-        await message.add_reaction('❌')
-        return
     
     # Kiểm tra từ đã được sử dụng chưa
     if word in game.used_words:
@@ -348,42 +352,46 @@ async def handle_game_message(message):
     
     # Kiểm tra quy tắc nối từ ghép
     if game.current_word:
-        last = get_last_word(game.current_word)
-        first = get_first_word(word)
-        if first != last:
-            await message.add_reaction('❌')
-            await message.channel.send(f"❌ Từ mới phải bắt đầu bằng từ: '{last.upper()}'!")
+        if not is_valid(game.current_word, word):
             return
-    
-    # Từ hợp lệ
-    await message.add_reaction('✅')
-    
-    # Cập nhật game state
-    game.current_word = word
-    game.used_words.add(word)
-    game.last_player_id = message.author.id
-    game.last_player_name = message.author.display_name  # Lưu tên người chơi
-    game.last_message_time = datetime.now()
-    
-    # Reset timeout
-    if game.timeout_task:
-        game.timeout_task.cancel()
-    game.timeout_task = asyncio.create_task(game_timeout())
-    
-    # Dừng timer task cũ nếu có
-    if game.timer_task:
-        game.timer_task.cancel()
-    
-    # Thông báo từ tiếp theo
-    next_hint = get_last_word(word).upper()
-    embed = discord.Embed(
-        title="⏰ Còn lại: 30 giây",
-        color=discord.Color.blue()
-    )
-    
-    # Gửi tin nhắn mới và lưu reference
-    game.timer_message = await message.channel.send(embed=embed)
-    
-    # Bắt đầu task cập nhật thời gian
-    game.timer_task = asyncio.create_task(update_timer_message())
+
+    # Kiểm tra từ có tồn tại trong DB không
+    if not await get_noi_tu_repo().is_exist(word):
+        await message.add_reaction('❌')
+        return
+
+    with game.lock:
+        if not is_valid(game.current_word, word):
+            return
+        # Từ hợp lệ
+        await message.add_reaction('✅')
+        
+        # Cập nhật game state
+        game.current_word = word
+        game.used_words.add(word)
+        game.last_player_id = message.author.id
+        game.last_player_name = message.author.display_name  # Lưu tên người chơi
+        game.last_message_time = datetime.now()
+        
+        # Reset timeout
+        if game.timeout_task:
+            game.timeout_task.cancel()
+        game.timeout_task = asyncio.create_task(game_timeout())
+        
+        # Dừng timer task cũ nếu có
+        if game.timer_task:
+            game.timer_task.cancel()
+        
+        # Thông báo từ tiếp theo
+        next_hint = get_last_word(word).upper()
+        embed = discord.Embed(
+            title="⏰ Còn lại: 30 giây",
+            color=discord.Color.blue()
+        )
+        
+        # Gửi tin nhắn mới và lưu reference
+        game.timer_message = await message.channel.send(embed=embed)
+        
+        # Bắt đầu task cập nhật thời gian
+        game.timer_task = asyncio.create_task(update_timer_message())
 
