@@ -18,3 +18,21 @@ async def currency_check(ctx: commands.Context):
             return
 
     await ctx.send(f"Thông tin tài khoản của bạn: {currency.balance}")
+
+@bot.command(name="rank", description="list rank")
+async def list_rank(ctx: commands.Context):
+    """Kiểm tra thông tin tài khoản của bạn"""
+    # Check if user is registered in database. If not, create a new one
+    balances = await currency_repo.get_all()
+    msg = "```\n"
+    msg += f"{'No.':<4} {'Name':<20} {'Win':>8}\n"
+    msg += "-" * 34 + "\n"
+    for i, b in enumerate(balances, start=1):
+        msg += f"{i:<4} {b.user_name:<20} {b.balance:>8}\n"
+    msg += "```"
+
+    await ctx.send(msg)
+
+async def incr(user_id, user_name, amount):
+    await currency_repo.upsert_or_increment_balance(user_id, user_name, amount)
+

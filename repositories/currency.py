@@ -61,12 +61,13 @@ class CurrencyRepository:
     async def get_all(self) -> List[DiscordCurrency]:
         """Lấy tất cả thông tin thành viên"""
         try:
-            response = self.table.select('*').execute()
+            response = self.table.select('*').order("balance", desc=True).execute()
             currencies = []
             for data in response.data:
                 currencies.append(DiscordCurrency(
                     id=data.get('id'),
                     user_id=data['user_id'],
+                    user_name=data['user_name'],
                     balance=data['balance'],
                     updated_at=datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00')) if data['updated_at'] else datetime.now()
                 ))
@@ -109,3 +110,29 @@ class CurrencyRepository:
         except Exception as e:
             print(f"Error getting all users with sort by balance: {e}")
             return []
+
+    async def upsert_or_increment_balance(self, user_id: str, user_name: str, amount: int) -> Optional[int]:
+        try:
+            response = self.table.select("*").eq("user_id", user_id).execute()
+            user_data = response.data[0] if response.data else None
+
+            now_str = datetime.utcnow().isoformat() + "Z"
+
+            if user_data:
+                new_balance = user_data["balance"] + amount
+                update_resp = self.table.update({
+                    "balance": new_balance,
+                    "updated_at": now_str
+                }).eq("user_id", user_id).execute()
+                return new_balance
+            else:
+                insert_resp = self.table.insert({
+                    "user_id": user_id,
+                    "user_name": user_name,
+                    "balance": amount,
+                    "updated_at": now_str
+                }).execute()
+                return amount
+        except Exception as e:
+            print(f"Error upserting balance for user {user_id}: {e}")
+            return None

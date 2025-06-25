@@ -6,6 +6,7 @@ from typing import Optional
 class DiscordCurrency:
     id: Optional[int]
     user_id: int
+    user_name: str
     balance: int
     updated_at: datetime
 

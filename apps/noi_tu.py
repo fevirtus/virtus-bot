@@ -5,6 +5,7 @@ from core.bot import bot
 from discord.ext import commands
 from typing import Dict, Set, Optional
 from datetime import datetime, timedelta
+from apps.currency import incr
 
 # Lazy load repository để tránh lỗi database connection
 noi_tu_repo = None
@@ -186,6 +187,7 @@ async def end_game(ctx):
             value=f"**{game.last_player_name}** - Từ cuối: **{game.current_word}**",
             inline=False
         )
+        await incr(game.last_player_id, game.last_player_name, 1)
     
     await ctx.send(embed=embed)
     
@@ -291,6 +293,7 @@ async def game_timeout():
                         value=f"**{game.last_player_name}** - Từ cuối: **{game.current_word}**",
                         inline=False
                     )
+                    await incr(game.last_player_id, game.last_player_name, 1)
                 
                 if game.channel:
                     await game.channel.send(embed=embed)
@@ -359,7 +362,7 @@ async def handle_game_message(message):
         await message.add_reaction('❌')
         return
 
-    with game.lock:
+    async with game.lock:
         if not is_valid(game.current_word, word):
             return
         # Từ hợp lệ
