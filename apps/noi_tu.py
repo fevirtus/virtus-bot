@@ -5,7 +5,6 @@ from core.bot import bot
 from discord.ext import commands
 from typing import Dict, Set, Optional
 from datetime import datetime, timedelta
-import threading
 
 # Lazy load repository để tránh lỗi database connection
 noi_tu_repo = None
@@ -35,7 +34,7 @@ class NoiTuGame:
         self.timer_message = None  # Tin nhắn hiển thị thời gian
         self.timer_task = None     # Task cập nhật thời gian
         self.start_time = None     # Thời gian bắt đầu game
-        self.lock = threading.Lock()
+        self.lock = asyncio.Lock()
 
 # Khởi tạo game state
 game = NoiTuGame()
