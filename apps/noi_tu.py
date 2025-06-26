@@ -1,10 +1,8 @@
 import discord
-import os
 import asyncio
-from core.bot import bot
-from discord.ext import commands
-from typing import Dict, Set, Optional
-from datetime import datetime, timedelta
+from core.bot import bot, CHANNEL_NOI_TU_ID
+from typing import Set
+from datetime import datetime
 from apps.currency import incr
 
 # Lazy load repository để tránh lỗi database connection
@@ -17,9 +15,6 @@ def get_noi_tu_repo():
         from repositories.noi_tu import NoiTuRepository
         noi_tu_repo = NoiTuRepository()
     return noi_tu_repo
-
-# Lấy channel ID từ environment
-CHANNEL_NOI_TU_ID = int(os.getenv('CHANNEL_NOI_TU_ID', 0))
 
 # Game state
 class NoiTuGame:
