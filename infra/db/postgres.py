@@ -40,9 +40,6 @@ class PostgresConnection:
 
             # Tạo client với SSL context
             self.supabase: Client = create_client(url, key)
-            
-            # Test connection
-            self.supabase.table('discord_server').select('count').limit(1).execute()
             print("Successfully connected to Supabase!")
         except Exception as e:
             raise Exception(f"Failed to connect to Supabase: {str(e)}")

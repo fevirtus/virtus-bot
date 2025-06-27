@@ -64,13 +64,14 @@ class CurrencyRepository:
             response = self.table.select('*').order("balance", desc=True).execute()
             currencies = []
             for data in response.data:
-                currencies.append(DiscordCurrency(
+                currency = DiscordCurrency(
                     id=data.get('id'),
                     user_id=data['user_id'],
                     user_name=data['user_name'],
                     balance=data['balance'],
-                    updated_at=datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00')) if data['updated_at'] else datetime.now()
-                ))
+                    updated_at=datetime.now()
+                )
+                currencies.append(currency)
             return currencies
         except Exception as e:
             print(f"Error getting all users: {e}")

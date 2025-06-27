@@ -20,6 +20,7 @@ class DiscordCurrency:
         return {
             "id": self.id,
             "user_id": self.user_id,
+            "user_name": self.user_name,
             "balance": self.balance,
             "updated_at": self.updated_at
         }
