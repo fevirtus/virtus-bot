@@ -22,6 +22,8 @@ currency_repo = CurrencyRepository()
 
 CHANNEL_HOME_DEBT_ID = int(os.getenv('CHANNEL_HOME_DEBT_ID', 0))
 CHANNEL_NOI_TU_ID = int(os.getenv('CHANNEL_NOI_TU_ID', 0))
+CHANNEL_CMC_CURRENCY_ID = int(os.getenv('CHANNEL_CMC_CURRENCY_ID', 0))
+OWNER_CHANNEL_CMC_CURRENCY_ID = int(os.getenv('OWNER_CHANNEL_CMC_CURRENCY_ID', 0))
 
 
 @bot.tree.command(name='help', description='Show help')
@@ -40,7 +42,7 @@ async def help(interaction: discord.Interaction):
         CHANNEL_NOI_TU_ID: [
             "!start",
             "!end"
-        ]
+        ],
     }
     
     # Kiểm tra xem channel có trong danh sách không
