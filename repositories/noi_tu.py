@@ -1,31 +1,35 @@
 from typing import List, Optional
-from models.noi_tu import DiscordNoiTu
-from infra.db import postgres
 from datetime import datetime
 import random
+from sqlalchemy import select, delete
+
+from models.noi_tu import DiscordNoiTu
+from infra.db import postgres
 
 class NoiTuRepository:
     def __init__(self):
-        self.table = postgres.get_table('dictionary_vietnamese_two_words')
+        self.Session = postgres.get_sessionmaker()
 
     async def is_exist(self, word: str) -> bool:
         """Kiểm tra xem từ có tồn tại trong bảng không"""
         try:
             word = word.strip()
-            response = self.table.select('*').eq('word', word).execute()
-            return len(response.data) > 0
+            async with self.Session() as session:
+                stmt = select(DiscordNoiTu).where(DiscordNoiTu.word == word).limit(1)
+                result = await session.execute(stmt)
+                return result.scalar_one_or_none() is not None
         except Exception as e:
             print(f"Error checking if word exists: {e}")
             return False
         
-    async def add(self, word: str, meaning: Optional[str] = None) -> bool:
+    async def add(self, word: str) -> bool:
         """Thêm từ vào bảng"""
         try:
-            response = self.table.insert({
-                'word': word,
-                'meaning': meaning
-            }).execute()
-            return response.data is not None
+            async with self.Session() as session:
+                noi_tu = DiscordNoiTu(word=word)
+                session.add(noi_tu)
+                await session.commit()
+                return True
         except Exception as e:
             print(f"Error adding word: {e}")
             return False
@@ -33,8 +37,11 @@ class NoiTuRepository:
     async def remove(self, word: str) -> bool:
         """Xóa từ khỏi bảng"""
         try:
-            response = self.table.delete().eq('word', word).execute()
-            return response.data is not None
+            async with self.Session() as session:
+                stmt = delete(DiscordNoiTu).where(DiscordNoiTu.word == word)
+                await session.execute(stmt)
+                await session.commit()
+                return True
         except Exception as e:
             print(f"Error removing word: {e}")
             return False
@@ -42,18 +49,18 @@ class NoiTuRepository:
     async def get_random_word(self) -> Optional[str]:
         """Lấy một từ ngẫu nhiên từ bảng"""
         try:
-            response = self.table.select('word').execute()
-            if response.data and len(response.data) > 0:
-                # Lọc từ có đúng 2 từ ghép, mỗi từ chỉ gồm chữ cái
-                words = []
-                for item in response.data:
-                    word = item['word'].strip()
+            async with self.Session() as session:
+                stmt = select(DiscordNoiTu.word)
+                result = await session.execute(stmt)
+                words: List[str] = []
+                for row in result.scalars():
+                    word = row.strip()
                     parts = word.split()
                     if len(parts) == 2 and all(part.isalpha() for part in parts):
                         words.append(word)
                 if words:
                     return random.choice(words)
-            return None
+                return None
         except Exception as e:
             print(f"Error getting random word: {e}")
             return None
@@ -61,17 +68,16 @@ class NoiTuRepository:
     async def get_all_words(self) -> List[str]:
         """Lấy tất cả từ trong bảng"""
         try:
-            response = self.table.select('word').execute()
-            if response.data:
-                # Lọc từ có đúng 2 từ ghép, mỗi từ chỉ gồm chữ cái
-                words = []
-                for item in response.data:
-                    word = item['word'].strip()
+            async with self.Session() as session:
+                stmt = select(DiscordNoiTu.word)
+                result = await session.execute(stmt)
+                words: List[str] = []
+                for row in result.scalars():
+                    word = row.strip()
                     parts = word.split()
                     if len(parts) == 2 and all(part.isalpha() for part in parts):
                         words.append(word)
                 return words
-            return []
         except Exception as e:
             print(f"Error getting all words: {e}")
             return []

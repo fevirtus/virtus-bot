@@ -54,7 +54,6 @@ CHANNEL_NOI_TU_ID=1234567890123456789
 Cần có bảng `dictionary_vietnamese_two_words` với cấu trúc:
 - `id` (primary key)
 - `word` (varchar, unique)
-- `meaning` (varchar, nullable)
 
 ## Quản lý từ điển
 

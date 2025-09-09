@@ -2,7 +2,7 @@ import os
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from repositories import HomeDebtRepository, CurrencyRepository
+from repositories import HomeDebtRepository, ScoreRepository
 
 # Load environment variables
 load_dotenv()
@@ -18,7 +18,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Initialize repositories
 home_debt_repo = HomeDebtRepository()
-currency_repo = CurrencyRepository()
+score_repo = ScoreRepository()
 
 CHANNEL_HOME_DEBT_ID = int(os.getenv('CHANNEL_HOME_DEBT_ID', 0))
 CHANNEL_NOI_TU_ID = int(os.getenv('CHANNEL_NOI_TU_ID', 0))

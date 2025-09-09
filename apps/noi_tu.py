@@ -3,7 +3,7 @@ import asyncio
 from core.bot import bot, CHANNEL_NOI_TU_ID
 from typing import Set
 from datetime import datetime
-from apps.currency import incr
+from apps.score import incr
 
 # Lazy load repository để tránh lỗi database connection
 noi_tu_repo = None
@@ -199,7 +199,7 @@ async def end_game(ctx):
     game.start_time = None
 
 @bot.command(name='add')
-async def add_word(ctx, *, word: str, meaning: str = None):
+async def add_word(ctx, *, word: str):
     """Thêm từ mới vào cơ sở dữ liệu (chỉ admin)"""
     if not is_correct_channel(ctx):
         return
@@ -219,12 +219,11 @@ async def add_word(ctx, *, word: str, meaning: str = None):
         return
     
     # Thêm từ
-    success = await get_noi_tu_repo().add(word, meaning)
+    success = await get_noi_tu_repo().add(word)
     if success:
         embed = discord.Embed(
             title="✅ Thêm từ thành công!",
-            description=f"Từ: **{word}**\n"
-                       f"Nghĩa: {meaning if meaning else 'Không có'}",
+            description=f"Từ: **{word}**",
             color=discord.Color.green()
         )
         await ctx.send(embed=embed)

@@ -1,4 +1,4 @@
 from .home_debt import HomeDebtRepository
-from .currency import CurrencyRepository
+from .score import ScoreRepository
 
-__all__ = ['HomeDebtRepository', 'CurrencyRepository'] 
+__all__ = ['HomeDebtRepository', 'ScoreRepository'] 

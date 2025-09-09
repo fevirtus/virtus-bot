@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from core import events, tasks
 from core.bot import bot
-from apps import home_debt, currency, noi_tu
+from apps import home_debt, score, noi_tu
 
 # Load environment variables
 load_dotenv()

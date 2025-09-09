@@ -1,9 +1,9 @@
-from models.home_debt import DiscordHomeDebt
-from models.currency import DiscordCurrency
+from models.home_debt import HomeDebt
+from models.score import Score
 from models.noi_tu import DiscordNoiTu
 
 __all__ = [
-    'DiscordHomeDebt',
-    'DiscordCurrency',
+    'HomeDebt',
+    'Score',
     'DiscordNoiTu'
 ] 

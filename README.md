@@ -5,7 +5,7 @@ Một Discord bot để quản lý điểm kinh nghiệm người dùng (user ex
 ## Tính năng
 
 - Quản lý điểm kinh nghiệm người dùng
-- Tích hợp với Supabase database
+- Kết nối PostgreSQL thuần (SQLAlchemy async + asyncpg)
 - Hệ thống sự kiện và tác vụ tự động
 
 ## Yêu cầu hệ thống
@@ -13,7 +13,7 @@ Một Discord bot để quản lý điểm kinh nghiệm người dùng (user ex
 - Python 3.9+
 - uv package manager
 - Discord Bot Token
-- Supabase credentials
+- PostgreSQL credentials
 
 ## Cài đặt và chạy với Docker
 
@@ -27,9 +27,7 @@ cd virtus-bot
 Tạo file `.env` với các biến môi trường cần thiết:
 ```env
 BOT_TOKEN=your_discord_bot_token
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_key
-DATABASE_URL=your_database_url
+POSTGRES_URL=postgresql+asyncpg://user:password@host:5432/dbname
 ```
 
 ### 3. Build và chạy với Docker Compose
@@ -96,7 +94,7 @@ virtus-bot/
 - discord.py >= 2.3.2
 - python-dotenv >= 1.0.0
 - sqlalchemy >= 2.0.0
-- supabase >= 2.3.0
+- asyncpg >= 0.29.0
 - asyncpg >= 0.29.0
 
 ## License
