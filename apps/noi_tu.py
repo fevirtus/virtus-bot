@@ -1,7 +1,7 @@
 import discord
 import asyncio
-from core.bot import bot, CHANNEL_NOI_TU_ID
-from typing import Set
+from core.bot import bot, CHANNEL_NOI_TU_IDS
+from typing import Set, Dict
 from datetime import datetime
 from apps.score import incr
 
@@ -32,8 +32,14 @@ class NoiTuGame:
         self.start_time = None     # Thời gian bắt đầu game
         self.lock = asyncio.Lock()
 
-# Khởi tạo game state
-game = NoiTuGame()
+# Dictionary để lưu game state cho từng channel
+games: Dict[int, NoiTuGame] = {}
+
+def get_game_for_channel(channel_id: int) -> NoiTuGame:
+    """Lấy game state cho channel cụ thể"""
+    if channel_id not in games:
+        games[channel_id] = NoiTuGame()
+    return games[channel_id]
 
 def is_admin(ctx):
     """Kiểm tra xem user có phải là admin không"""
@@ -41,7 +47,7 @@ def is_admin(ctx):
 
 def is_correct_channel(ctx):
     """Kiểm tra xem command có được thực hiện trong đúng channel không"""
-    return ctx.channel.id == CHANNEL_NOI_TU_ID
+    return ctx.channel.id in CHANNEL_NOI_TU_IDS
 
 def get_first_word(word: str) -> str:
     return word.strip().split()[0] if word else ''
@@ -58,7 +64,7 @@ def format_time_remaining(seconds: int) -> str:
         return "⏰ Hết thời gian!"
     return f"⏰ Còn lại: {seconds} giây"
 
-async def update_timer_message():
+async def update_timer_message(game: NoiTuGame):
     """Cập nhật tin nhắn thời gian mỗi 1 giây"""
     start_time = game.last_message_time
     if not start_time:
@@ -101,6 +107,9 @@ async def start_game(ctx):
     if not is_correct_channel(ctx):
         return
     
+    # Lấy game state cho channel này
+    game = get_game_for_channel(ctx.channel.id)
+    
     if game.is_active:
         await ctx.send("❌ Trò chơi đã đang diễn ra!")
         return
@@ -125,7 +134,7 @@ async def start_game(ctx):
     game.start_time = datetime.now()
     
     # Tạo timeout task
-    game.timeout_task = asyncio.create_task(game_timeout())
+    game.timeout_task = asyncio.create_task(game_timeout(game))
     
     embed = discord.Embed(
         title="🎮 Trò chơi Nối Từ đã bắt đầu!",
@@ -146,6 +155,9 @@ async def end_game(ctx):
     """Kết thúc trò chơi nối từ"""
     if not is_correct_channel(ctx):
         return
+    
+    # Lấy game state cho channel này
+    game = get_game_for_channel(ctx.channel.id)
     
     if not game.is_active:
         await ctx.send("❌ Không có trò chơi nào đang diễn ra!")
@@ -257,7 +269,7 @@ async def remove_word(ctx, *, word: str):
     else:
         await ctx.send("❌ Có lỗi xảy ra khi xóa từ!")
 
-async def game_timeout():
+async def game_timeout(game: NoiTuGame):
     """Xử lý timeout của game"""
     try:
         # Đợi đúng 30 giây
@@ -316,8 +328,11 @@ async def handle_game_message(message):
         return
     
     # Chỉ xử lý trong channel được chỉ định
-    if message.channel.id != CHANNEL_NOI_TU_ID:
+    if message.channel.id not in CHANNEL_NOI_TU_IDS:
         return
+    
+    # Lấy game state cho channel này
+    game = get_game_for_channel(message.channel.id)
     
     # Nếu game không active, bỏ qua
     if not game.is_active:
@@ -372,7 +387,7 @@ async def handle_game_message(message):
         # Reset timeout
         if game.timeout_task:
             game.timeout_task.cancel()
-        game.timeout_task = asyncio.create_task(game_timeout())
+        game.timeout_task = asyncio.create_task(game_timeout(game))
         
         # Dừng timer task cũ nếu có
         if game.timer_task:
@@ -389,5 +404,5 @@ async def handle_game_message(message):
         game.timer_message = await message.channel.send(embed=embed)
         
         # Bắt đầu task cập nhật thời gian
-        game.timer_task = asyncio.create_task(update_timer_message())
+        game.timer_task = asyncio.create_task(update_timer_message(game))
 

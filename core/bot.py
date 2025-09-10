@@ -21,7 +21,19 @@ home_debt_repo = HomeDebtRepository()
 score_repo = ScoreRepository()
 
 CHANNEL_HOME_DEBT_ID = int(os.getenv('CHANNEL_HOME_DEBT_ID', 0))
-CHANNEL_NOI_TU_ID = int(os.getenv('CHANNEL_NOI_TU_ID', 0))
+
+# Hỗ trợ nhiều channel cho game nối từ với format: ID1,ID2,ID3
+CHANNEL_NOI_TU_IDS = []
+channel_noi_tu_env = os.getenv('CHANNEL_NOI_TU_ID', '')
+if channel_noi_tu_env:
+    for channel_id in channel_noi_tu_env.split(','):
+        try:
+            CHANNEL_NOI_TU_IDS.append(int(channel_id.strip()))
+        except ValueError:
+            print(f"Invalid channel ID: {channel_id}")
+
+# Giữ lại CHANNEL_NOI_TU_ID cho backward compatibility (lấy ID đầu tiên)
+CHANNEL_NOI_TU_ID = CHANNEL_NOI_TU_IDS[0] if CHANNEL_NOI_TU_IDS else 0
 
 
 @bot.tree.command(name='help', description='Show help')
@@ -37,11 +49,16 @@ async def help(interaction: discord.Interaction):
             "!hdtra <số tiền>",
             "!hdvay <số tiền>"
         ],
-        CHANNEL_NOI_TU_ID: [
-            "!start",
-            "!end"
-        ],
     }
+    
+    # Thêm help cho tất cả channel nối từ
+    for channel_id in CHANNEL_NOI_TU_IDS:
+        help_commands[channel_id] = [
+            "!start",
+            "!end",
+            "!add <từ> (admin only)",
+            "!remove <từ> (admin only)"
+        ]
     
     # Kiểm tra xem channel có trong danh sách không
     if channel.id in help_commands:
