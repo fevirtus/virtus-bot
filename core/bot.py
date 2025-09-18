@@ -35,6 +35,16 @@ if channel_noi_tu_env:
 # Giữ lại CHANNEL_NOI_TU_ID cho backward compatibility (lấy ID đầu tiên)
 CHANNEL_NOI_TU_ID = CHANNEL_NOI_TU_IDS[0] if CHANNEL_NOI_TU_IDS else 0
 
+# Admin IDs - Hỗ trợ nhiều admin với format: ID1,ID2,ID3
+ADMIN_IDS = []
+admin_ids_env = os.getenv('ADMIN_IDS', '')
+if admin_ids_env:
+    for admin_id in admin_ids_env.split(','):
+        try:
+            ADMIN_IDS.append(int(admin_id.strip()))
+        except ValueError:
+            print(f"Invalid admin ID: {admin_id}")
+
 
 @bot.tree.command(name='help', description='Show help')
 async def help(interaction: discord.Interaction):

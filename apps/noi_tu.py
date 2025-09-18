@@ -1,6 +1,6 @@
 import discord
 import asyncio
-from core.bot import bot, CHANNEL_NOI_TU_IDS
+from core.bot import bot, CHANNEL_NOI_TU_IDS, ADMIN_IDS
 from typing import Set, Dict
 from datetime import datetime
 from apps.score import incr
@@ -43,7 +43,7 @@ def get_game_for_channel(channel_id: int) -> NoiTuGame:
 
 def is_admin(ctx):
     """Kiểm tra xem user có phải là admin không"""
-    return ctx.author.guild_permissions.administrator
+    return ctx.author.id in ADMIN_IDS
 
 def is_correct_channel(ctx):
     """Kiểm tra xem command có được thực hiện trong đúng channel không"""
@@ -225,12 +225,7 @@ async def add_word(ctx, *, word: str):
         await ctx.send("❌ Từ phải có đúng 2 từ ghép!")
         return
     
-    # Kiểm tra từ đã tồn tại chưa
-    if await get_noi_tu_repo().is_exist(word):
-        await ctx.send(f"❌ Từ '{word}' đã tồn tại trong cơ sở dữ liệu!")
-        return
-    
-    # Thêm từ
+    # Thêm từ (repository sẽ tự kiểm tra duplicate)
     success = await get_noi_tu_repo().add(word)
     if success:
         embed = discord.Embed(
@@ -240,7 +235,11 @@ async def add_word(ctx, *, word: str):
         )
         await ctx.send(embed=embed)
     else:
-        await ctx.send("❌ Có lỗi xảy ra khi thêm từ!")
+        # Kiểm tra xem có phải do duplicate không
+        if await get_noi_tu_repo().is_exist(word):
+            await ctx.send(f"❌ Từ '{word}' đã tồn tại trong cơ sở dữ liệu!")
+        else:
+            await ctx.send("❌ Có lỗi xảy ra khi thêm từ!")
 
 @bot.command(name='remove')
 async def remove_word(ctx, *, word: str):

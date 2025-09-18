@@ -25,8 +25,20 @@ class NoiTuRepository:
     async def add(self, word: str) -> bool:
         """Thêm từ vào bảng"""
         try:
+            # Kiểm tra từ đã tồn tại chưa trước khi thêm
+            if await self.is_exist(word):
+                print(f"Word '{word}' already exists")
+                return False
+                
             async with self.Session() as session:
-                noi_tu = DiscordNoiTu(word=word)
+                # Lấy ID cao nhất hiện tại và tạo ID mới
+                stmt = select(DiscordNoiTu.id).order_by(DiscordNoiTu.id.desc()).limit(1)
+                result = await session.execute(stmt)
+                max_id = result.scalar_one_or_none()
+                next_id = (max_id + 1) if max_id is not None else 1
+                
+                # Tạo object với ID cụ thể
+                noi_tu = DiscordNoiTu(id=next_id, word=word)
                 session.add(noi_tu)
                 await session.commit()
                 return True
