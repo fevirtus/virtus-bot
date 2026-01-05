@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import (
@@ -44,7 +45,12 @@ class PostgresConnection:
             user = os.getenv("POSTGRES_USER", "postgres")
             password = os.getenv("POSTGRES_PASSWORD", "")
             database = os.getenv("POSTGRES_DB", "postgres")
-            auth = f"{user}:{password}@" if password else f"{user}@"
+            
+            # Encode password để handle ký tự đặc biệt như @, /, etc.
+            if password:
+                auth = f"{user}:{quote_plus(password)}@"
+            else:
+                auth = f"{user}@"
             raw_url = f"postgresql+asyncpg://{auth}{host}:{port}/{database}"
 
         url = _normalize_asyncpg_url(raw_url)
