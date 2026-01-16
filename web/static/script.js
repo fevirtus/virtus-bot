@@ -20,8 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         'football': {
             keys: ['CHANNEL_FOOTBALL_IDS', 'FOOTBALL_API_KEY', 'FOOTBALL_LEAGUES', 'FOOTBALL_TEAMS'],
-            validation: 'channel_list',
+            validation: null, // Removed global validation
             meta: {
+                'CHANNEL_FOOTBALL_IDS': { validation: 'channel_list' }, // Moved specific validation here
                 'FOOTBALL_LEAGUES': { type: 'multi-select', options: ['Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1', 'UEFA Champions League', 'V-League'] },
                 'FOOTBALL_TEAMS': { type: 'async-select', placeholder: 'Search team...' }
             }
@@ -444,8 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Save Button (Common)
                     const saveRow = document.createElement('div');
                     saveRow.style.marginTop = '5px';
+                    // Determine validation type: check meta first, then service-level fallback
+                    const validationType = (meta && meta.validation) ? meta.validation : (configMeta.validation || '');
+
                     saveRow.innerHTML = `
-                        <button class="btn secondary" id="btn-${key}" onclick="window.saveServiceConfig('${key}', '${configMeta.validation}')">Save</button>
+                        <button class="btn secondary" id="btn-${key}" onclick="window.saveServiceConfig('${key}', '${validationType}')">Save</button>
                         <small id="msg-${key}" style="margin-left:10px"></small>
                     `;
                     formGroup.appendChild(saveRow);
