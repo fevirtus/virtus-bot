@@ -1,21 +1,25 @@
 # Virtus Bot
 
-Một Discord bot để quản lý điểm kinh nghiệm người dùng (user experience points).
+Một Discord bot mã nguồn mở tích hợp Admin Dashboard để quản lý cấu hình và điểm kinh nghiệm người dùng.
 
 ## Tính năng
 
-- Quản lý điểm kinh nghiệm người dùng
-- Kết nối PostgreSQL thuần (SQLAlchemy async + asyncpg)
-- Hệ thống sự kiện và tác vụ tự động
+-   **Admin Dashboard (Web UI)**: Quản lý cấu hình bot trực quan.
+-   **Dynamic Configuration**: Thay đổi cấu hình (Channel ID, Admin ID) mà không cần restart.
+-   **Modules (Cogs)**:
+    -   `HomeDebt`: Quản lý chi tiêu chung.
+    -   `NoiTu`: Trò chơi nối từ.
+    -   `Score`: Hệ thống điểm kinh nghiệm.
+-   **Tech Stack**: Python, Discord.py, FastAPI, SQLAlchemy (Async), PostgreSQL.
 
 ## Yêu cầu hệ thống
 
-- Python 3.9+
-- uv package manager
-- Discord Bot Token
-- PostgreSQL credentials
+-   Python 3.9+
+-   uv package manager (khuyến nghị) hoặc pip
+-   Discord Bot Token
+-   PostgreSQL Database
 
-## Cài đặt và chạy với Docker
+## Cài đặt và chạy
 
 ### 1. Clone repository
 ```bash
@@ -23,80 +27,56 @@ git clone <repository-url>
 cd virtus-bot
 ```
 
-### 2. Tạo file .env
-Tạo file `.env` với các biến môi trường cần thiết:
+### 2. Cài đặt dependencies
+Dự án sử dụng `uv` để quản lý package.
+```bash
+pip install uv
+uv sync
+```
+
+### 3. Cấu hình môi trường
+Tạo file `.env` từ `CONFIG_EXAMPLE.md` (hoặc tạo mới):
 ```env
 BOT_TOKEN=your_discord_bot_token
 POSTGRES_URL=postgresql+asyncpg://user:password@host:5432/dbname
 ```
+> **Auto-Seed**: Khi khởi động, Bot sẽ tự động sao chép `CHANNEL_HOME_DEBT_ID`, `CHANNEL_NOI_TU_IDS`, `ADMIN_IDS` từ `.env` vào Database nếu chưa có.
+> Bạn có thể quản lý chúng qua Admin UI sau đó.
 
-### 3. Build và chạy với Docker Compose
-```bash
-# Build image
-docker-compose build
-
-# Chạy bot
-docker-compose up -d
-
-# Xem logs
-docker-compose logs -f
-
-# Dừng bot
-docker-compose down
-```
-
-### 4. Chạy với Docker trực tiếp
-```bash
-# Build image
-docker build -t virtus-bot .
-
-# Chạy container
-docker run -d \
-  --name virtus-bot \
-  --env-file .env \
-  --restart unless-stopped \
-  virtus-bot
-```
-
-## Phát triển local
-
-### 1. Cài đặt dependencies
-```bash
-# Cài đặt uv
-pip install uv
-
-# Sync dependencies
-uv sync
-```
-
-### 2. Chạy bot
+### 4. Chạy Bot & Web Server
 ```bash
 uv run python main.py
 ```
+-   **Bot**: Sẽ tự động đăng nhập và online.
+-   **Admin Dashboard**: Truy cập tại `http://localhost:8000`.
+
+## Sử dụng Admin Dashboard
+
+1.  Truy cập `http://localhost:8000`.
+2.  Thêm các cấu hình cần thiết:
+    -   `CHANNEL_HOME_DEBT_ID`: ID của kênh channel chat chi tiêu.
+    -   `CHANNEL_NOI_TU_IDS`: Danh sách ID các kênh chơi nối từ (cách nhau bởi dấu phẩy).
+    -   `ADMIN_IDS`: Danh sách ID của admin bot (cách nhau bởi dấu phẩy).
 
 ## Cấu trúc dự án
 
 ```
 virtus-bot/
-├── apps/           # Các ứng dụng Discord commands
-├── core/           # Core bot functionality
-├── models/         # Database models
-├── repositories/   # Data access layer
-├── utils/          # Utility functions
-├── infra/          # Infrastructure code
-├── main.py         # Entry point
-├── pyproject.toml  # Project configuration
-└── uv.lock         # Locked dependencies
+├── bot/                # Mã nguồn Bot
+│   ├── cogs/           # Các chức năng (Modules)
+│   └── core/           # Core bot class
+├── web/                # Mã nguồn Web Admin
+│   ├── static/         # Frontend assets (HTML/CSS/JS)
+│   └── server.py       # FastAPI application
+├── models/             # Database models
+├── repositories/       # Data access layer
+├── infra/              # Infrastructure (DB connection)
+├── main.py             # Entry point (Runs Bot + Web)
+└── ...
 ```
 
-## Dependencies
-
-- discord.py >= 2.3.2
-- python-dotenv >= 1.0.0
-- sqlalchemy >= 2.0.0
-- asyncpg >= 0.29.0
-- asyncpg >= 0.29.0
-
-## License
-
-Xem file [LICENSE](LICENSE) để biết thêm chi tiết.
+## Docker Support
+Dự án hỗ trợ chạy bằng Docker.
+```bash
+docker-compose up --build -d
+```

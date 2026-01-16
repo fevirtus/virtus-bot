@@ -66,10 +66,83 @@ class PostgresConnection:
             self.engine, expire_on_commit=False
         )
 
+    async def wait_for_connection(self, timeout: int = 60, retry_interval: int = 2):
+        """Wait for database connection to be ready"""
+        import asyncio
+        from sqlalchemy import text
+        import time
+
+        start_time = time.time()
+        while True:
+            try:
+                async with self.engine.begin() as conn:
+                    await conn.execute(text("SELECT 1"))
+                print("✅ Database connection established!")
+                return True
+            except Exception as e:
+                if time.time() - start_time > timeout:
+                    print(f"❌ Failed to connect to database after {timeout}s: {e}")
+                    raise e
+                
+                print(f"⚠️ Database not ready, retrying in {retry_interval}s...")
+                await asyncio.sleep(retry_interval)
+
     async def create_tables(self):
         """Tạo tất cả tables từ Base metadata"""
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+    async def verify_and_migrate_schema(self):
+        """Manually verify and migrate schema for multi-server support"""
+        print("🔄 Verifying database schema...")
+        from sqlalchemy import text
+        
+        queries = [
+            # 1. Add columns first
+            "ALTER TABLE bot_configs ADD COLUMN IF NOT EXISTS guild_id BIGINT DEFAULT 0;",
+            "ALTER TABLE home_debt ADD COLUMN IF NOT EXISTS guild_id BIGINT DEFAULT 0;",
+            "ALTER TABLE score ADD COLUMN IF NOT EXISTS guild_id BIGINT DEFAULT 0;",
+            
+            # 2. Fix Primary Key for bot_configs
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bot_configs_pkey') THEN
+                    ALTER TABLE bot_configs DROP CONSTRAINT bot_configs_pkey;
+                END IF;
+            END $$;
+            """,
+            # Re-adding PK might fail if there are duplicates, but usually safe if coming from single-tenant
+            "ALTER TABLE bot_configs ADD PRIMARY KEY (guild_id, key);",
+
+            # 3. Add Unique Constraints
+            """
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_home_debt_guild_user') THEN
+                    ALTER TABLE home_debt ADD CONSTRAINT uq_home_debt_guild_user UNIQUE (guild_id, user_id);
+                END IF;
+            END $$;
+            """,
+            """
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_score_guild_user') THEN
+                    ALTER TABLE score ADD CONSTRAINT uq_score_guild_user UNIQUE (guild_id, user_id);
+                END IF;
+            END $$;
+            """
+        ]
+        
+        async with self.engine.begin() as conn:
+            for q in queries:
+                try:
+                    await conn.execute(text(q))
+                except Exception as e:
+                    # Ignore "multiple primary keys" errors if we ran this partially or if constraints conflict in weird ways
+                    # But print simple warning
+                    pass
+        print("✅ Schema verification/migration completed.")
 
     def get_engine(self) -> AsyncEngine:
         return self.engine

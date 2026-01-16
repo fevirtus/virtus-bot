@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtus Bot Admin</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand-header">
+                <div class="brand-logo">🛡️</div>
+                <div>
+                    <h1>Virtus Bot</h1>
+                    <span>Admin Panel</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section-title">SERVERS</div>
+
+            <ul id="serverList" class="server-list">
+                <!-- Server items loaded here -->
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h2 id="selectedGuildName">Select a Server</h2>
+                <div class="user-profile">
+                    <!-- Placeholder for logged in admin info if needed -->
+                    <span>Administrator</span>
+                </div>
+            </header>
+
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay hidden">
+                <div class="spinner"></div>
+                <p>Loading data...</p>
+            </div>
+
+            <div id="contentArea" class="content-area hidden">
+                <!-- TABS -->
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="general">Info</button>
+                    <button class="tab-btn" data-tab="config">Config & Admin</button>
+                    <button class="tab-btn" data-tab="services">Services</button>
+                </div>
+
+                <!-- TAB CONTENTS -->
+                <div class="tab-content">
+
+                    <!-- 1. INFO TAB -->
+                    <div id="general" class="tab-pane active">
+                        <section class="card">
+                            <h3>Server Information</h3>
+                            <div id="serverInfoContainer" class="server-info-grid">
+                                <p>Loading...</p>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- 2. CONFIG TAB -->
+                    <div id="config" class="tab-pane">
+                        <section class="card">
+                            <h3>Admin Management</h3>
+                            <p class="text-muted">Manage bot administrators for this server.</p>
+                            <div class="form-group">
+                                <label for="adminIdsInput">Admin IDs (comma separated)</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="adminIdsInput" placeholder="e.g. 123456789, 987654321">
+                                    <button id="saveAdminsBtn" class="btn primary">Save & Verify</button>
+                                </div>
+                                <small id="adminValidationMsg"></small>
+                            </div>
+                        </section>
+
+                        <section class="card">
+                            <h3>Custom Configurations</h3>
+                            <p class="text-muted">Manually add key-value configurations.</p>
+                            <form id="configForm">
+                                <div class="form-row">
+                                    <div class="form-group" style="flex:1">
+                                        <label>Key</label>
+                                        <input type="text" id="key" name="key" required placeholder="CONFIG_KEY">
+                                    </div>
+                                    <div class="form-group" style="flex:1">
+                                        <label>Value</label>
+                                        <input type="text" id="value" name="value" required placeholder="Value">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Description</label>
+                                    <input type="text" id="description" name="description"
+                                        placeholder="Optional description">
+                                </div>
+                                <button type="submit" class="btn primary">Add Config</button>
+                            </form>
+
+                            <h4>Current List</h4>
+                            <div class="table-container">
+                                <table id="configTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Key</th>
+                                            <th>Value</th>
+                                            <th>Description</th>
+                                            <th style="width: 100px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- 3. SERVICES TAB -->
+                    <div id="services" class="tab-pane">
+                        <div id="servicesContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

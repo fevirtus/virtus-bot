@@ -11,22 +11,25 @@ class ScoreRepository:
     def __init__(self):
         self.Session = postgres.get_sessionmaker()
 
-    async def get(self, user_id: int) -> Optional[Score]:
+    async def get(self, guild_id: int, user_id: int) -> Optional[Score]:
         """Lấy thông tin thành viên"""
         try:
             async with self.Session() as session:
-                stmt = select(Score).where(Score.user_id == user_id)
+                stmt = select(Score).where(
+                    Score.guild_id == guild_id,
+                    Score.user_id == user_id
+                )
                 result = await session.execute(stmt)
                 return result.scalar_one_or_none()
         except Exception as e:
             print(f"Error getting user: {e}")
             return None
         
-    async def create(self, user_id: int, point: int) -> Optional[Score]:
+    async def create(self, guild_id: int, user_id: int, point: int) -> Optional[Score]:
         """Tạo thông tin thành viên"""
         try:
             async with self.Session() as session:
-                currency = Score(user_id=user_id, point=point)
+                currency = Score(guild_id=guild_id, user_id=user_id, point=point)
                 session.add(currency)
                 await session.commit()
                 await session.refresh(currency)
@@ -35,13 +38,16 @@ class ScoreRepository:
             print(f"Error creating user: {e}")
             return None
         
-    async def update(self, user_id: int, point: int) -> Optional[Score]:
+    async def update(self, guild_id: int, user_id: int, point: int) -> Optional[Score]:
         """Cập nhật thông tin thành viên"""
         try:
             async with self.Session() as session:
                 stmt = (
                     update(Score)
-                    .where(Score.user_id == user_id)
+                    .where(
+                        Score.guild_id == guild_id,
+                        Score.user_id == user_id
+                    )
                     .values(point=point)
                     .returning(Score)
                 )
@@ -52,22 +58,22 @@ class ScoreRepository:
             print(f"Error updating user: {e}")
             return None
         
-    async def get_all(self) -> List[Score]:
+    async def get_all(self, guild_id: int) -> List[Score]:
         """Lấy tất cả thông tin thành viên"""
         try:
             async with self.Session() as session:
-                stmt = select(Score).order_by(Score.point.desc())
+                stmt = select(Score).where(Score.guild_id == guild_id).order_by(Score.point.desc())
                 result = await session.execute(stmt)
                 return result.scalars().all()
         except Exception as e:
             print(f"Error getting all users: {e}")
             return []
         
-    async def get_all_with_point(self) -> List[Score]:
+    async def get_all_with_point(self, guild_id: int) -> List[Score]:
         """Lấy tất cả thông tin thành viên và số dư"""
         try:
             async with self.Session() as session:
-                stmt = select(Score)
+                stmt = select(Score).where(Score.guild_id == guild_id)
                 result = await session.execute(stmt)
                 return result.scalars().all()
         except Exception as e:
@@ -75,28 +81,29 @@ class ScoreRepository:
             return []
             
     # Get all with sort by point
-    async def get_all_with_sort_by_point(self) -> List[Score]:
+    async def get_all_with_sort_by_point(self, guild_id: int) -> List[Score]:
         """Lấy tất cả thông tin thành viên và sắp xếp theo số dư"""
         try:
             async with self.Session() as session:
-                stmt = select(Score).order_by(Score.point.desc())
+                stmt = select(Score).where(Score.guild_id == guild_id).order_by(Score.point.desc())
                 result = await session.execute(stmt)
                 return result.scalars().all()
         except Exception as e:
             print(f"Error getting all users with sort by point: {e}")
             return []
 
-    async def upsert_or_increment_point(self, user_id: str, user_name: str, amount: int) -> Optional[int]:
+    async def upsert_or_increment_point(self, guild_id: int, user_id: str, user_name: str, amount: int) -> Optional[int]:
         try:
             async with self.Session() as session:
                 # Sử dụng PostgreSQL UPSERT (ON CONFLICT)
                 stmt = pg_insert(Score).values(
+                    guild_id=int(guild_id),
                     user_id=int(user_id),
-                    user_name=user_name,
+                    user_name=str(user_name),
                     point=amount
                 )
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=['user_id'],
+                    index_elements=['guild_id', 'user_id'], # Must match UniqueConstraint/Index
                     set_=dict(
                         point=Score.point + amount,
                         user_name=stmt.excluded.user_name

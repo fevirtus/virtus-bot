@@ -9,33 +9,39 @@ class HomeDebtRepository:
     def __init__(self):
         self.Session = postgres.get_sessionmaker()
 
-    async def get(self, discord_user_id: int) -> Optional[HomeDebt]:
+    async def get(self, guild_id: int, discord_user_id: int) -> Optional[HomeDebt]:
         """Lấy thông tin thành viên"""
         try:
             async with self.Session() as session:
-                stmt = select(HomeDebt).where(HomeDebt.user_id == discord_user_id)
+                stmt = select(HomeDebt).where(
+                    HomeDebt.guild_id == guild_id,
+                    HomeDebt.user_id == discord_user_id
+                )
                 result = await session.execute(stmt)
                 return result.scalar_one_or_none()
         except Exception as e:
             print(f"Error getting user: {e}")
             return None
         
-    async def get_other(self, discord_user_id: int) -> Optional[HomeDebt]:
+    async def get_other(self, guild_id: int, discord_user_id: int) -> Optional[HomeDebt]:
         """Lấy thông tin thành viên khác"""
         try:
             async with self.Session() as session:
-                stmt = select(HomeDebt).where(HomeDebt.user_id != discord_user_id).limit(1)
+                stmt = select(HomeDebt).where(
+                    HomeDebt.guild_id == guild_id,
+                    HomeDebt.user_id != discord_user_id
+                ).limit(1)
                 result = await session.execute(stmt)
                 return result.scalar_one_or_none()
         except Exception as e:
             print(f"Error getting other member: {e}")
             return None
 
-    async def create_home_debt(self, user_id: int, value: int) -> Optional[HomeDebt]:
+    async def create_home_debt(self, guild_id: int, user_id: int, value: int) -> Optional[HomeDebt]:
         """Tạo mới khoản nợ"""
         try:
             async with self.Session() as session:
-                home_debt = HomeDebt(user_id=user_id, value=value)
+                home_debt = HomeDebt(guild_id=guild_id, user_id=user_id, value=value)
                 session.add(home_debt)
                 await session.commit()
                 await session.refresh(home_debt)
@@ -57,13 +63,13 @@ class HomeDebtRepository:
             print(f"Error updating home debt: {e}")
             return None
 
-    async def get_all(self) -> List[HomeDebt]:
+    async def get_all(self, guild_id: int) -> List[HomeDebt]:
         """Lấy tất cả khoản nợ"""
         try:
             async with self.Session() as session:
-                stmt = select(HomeDebt)
+                stmt = select(HomeDebt).where(HomeDebt.guild_id == guild_id)
                 result = await session.execute(stmt)
-                return result.scalars().all()
+                return list(result.scalars().all())
         except Exception as e:
             print(f"Error getting all home debts: {e}")
             return []
