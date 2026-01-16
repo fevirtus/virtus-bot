@@ -54,6 +54,7 @@ class PostgresConnection:
             raw_url = f"postgresql+asyncpg://{auth}{host}:{port}/{database}"
 
         url = _normalize_asyncpg_url(raw_url)
+        print(f"🔌 Connecting to database at: {url.split('@')[-1] if '@' in url else url}")
 
         self.engine: AsyncEngine = create_async_engine(
             url,

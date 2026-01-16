@@ -9,7 +9,12 @@ services:
       - "8000:8000"
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
-      - POSTGRES_URL=${POSTGRES_URL:-postgresql+asyncpg://virtus:password@db:5432/virtus_bot}
+      - POSTGRES_URL=${POSTGRES_URL}
+      - POSTGRES_HOST=${POSTGRES_HOST:-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-virtus}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-virtus_bot}
     depends_on:
       - db
     command: uv run python main.py
