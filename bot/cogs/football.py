@@ -181,35 +181,31 @@ class FootballCog(commands.Cog):
             "koln": ["1. fc koln", "fc koln"]
         }
         
+        from thefuzz import fuzz
+        
         for interested in interested_list:
             # Normalize Configured Name
-            # e.g. "1. FC Köln" -> "koln"
             user_clean = self._clean_name(interested).lower()
             
             # 1. Direct Comparison (Clean vs Clean)
-            # "koln" == "koln"
             if user_clean == raw_clean: return True
-            if user_clean in raw_clean: return True # "chelsea" in "chelsea"
+            if user_clean in raw_clean: return True
             
-            # 2. Check Aliases (Bidirectional check)
-            # If user saved "Man Utd", check if matches "Manchester United"
-            # If user saved "Manchester United", check if matches "Man Utd"
-            
+            # 2. Check Aliases
             for alias, targets in aliases.items():
                 alias_clean = self._clean_name(alias).lower()
-                
-                # Check if 'interested' is an alias
                 if user_clean == alias_clean: 
-                    # Does the real team name match any target?
                     for t in targets:
                          if self._clean_name(t).lower() == raw_clean: return True
-                         
-                # Check if current team 'raw_clean' is effectively one of the targets
-                # And user has the alias
-                # (Complex, sticking to simple match first)
-                pass 
+            
+            # 3. Fuzzy Matching
+            # token_set_ratio handles "Chelsea" vs "Chelsea FC" -> 100
+            # "Man City" vs "Manchester City" -> High
+            ratio = fuzz.token_set_ratio(user_clean, raw_clean)
+            if ratio >= 80:
+                return True
                 
-            # 3. Fallback: Raw substring
+            # 4. Fallback: Raw substring
             if interested.lower() in team_name.lower(): return True
                     
         return False
@@ -419,11 +415,31 @@ class FootballCog(commands.Cog):
 
     @fb_group.command(name="list", description="List subscriptions")
     async def list_slash(self, interaction: discord.Interaction):
+        # 1. DB Subs
         subs = await self.repo.get_guild_subscriptions(interaction.guild_id)
-        if not subs:
+        
+        lines = []
+        if subs:
+            for s in subs:
+                lines.append(f"• **{s.team_name}** (<#{s.channel_id}>) [Manual]")
+
+        # 2. Config Subs
+        cfg_teams_str = await self.config_repo.get(interaction.guild_id, "FOOTBALL_TEAMS", "")
+        cfg_channels_str = await self.config_repo.get(interaction.guild_id, "CHANNEL_FOOTBALL_IDS", "")
+        
+        if cfg_teams_str and cfg_channels_str:
+            teams = [t.strip() for t in cfg_teams_str.split(',') if t.strip()]
+            channels = [c.strip() for c in cfg_channels_str.split(',') if c.strip().isdigit()]
+            
+            if teams and channels:
+                channel_mentions = ", ".join([f"<#{c}>" for c in channels])
+                for t in teams:
+                    lines.append(f"• **{t}** ({channel_mentions}) [Config]")
+
+        if not lines:
             return await interaction.response.send_message("No football subscriptions in this server.")
         
-        msg = "**Subscriptions:**\n" + "\n".join([f"• {s.team_name} (<#{s.channel_id}>)" for s in subs])
+        msg = "**Subscriptions:**\n" + "\n".join(lines)
         await interaction.response.send_message(msg)
 
     @tasks.loop(minutes=2)

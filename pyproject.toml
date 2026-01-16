@@ -13,4 +13,5 @@ dependencies = [
     "fastapi>=0.128.0",
     "uvicorn>=0.39.0",
     "aiohttp>=3.12.12",
+    "thefuzz>=0.19.0",
 ]
