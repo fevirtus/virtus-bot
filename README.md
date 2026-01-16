@@ -76,7 +76,40 @@ virtus-bot/
 ```
 
 ## Docker Support
-Dự án hỗ trợ chạy bằng Docker.
-```bash
-docker-compose up --build -d
-```
+
+Dự án hỗ trợ triển khai nhanh bằng Docker Compose với image đã được build sẵn.
+
+### Yêu cầu
+- Docker
+- Docker Compose
+
+### Cài đặt và chạy
+1.  Tạo file `.env` (nếu chưa có):
+    ```bash
+    cp CONFIG_EXAMPLE.md .env
+    # Hoặc tạo mới và điền các giá trị cần thiết
+    ```
+    > **Lưu ý Database**:
+    > - Mặc định, bot sẽ kết nối tới Postgres container được tạo kèm trong `docker-compose.yml`.
+    > - Nếu bạn muốn dùng Database riêng (bên ngoài Docker hoặc host khác), hãy cấu hình biến `POSTGRES_URL` trong file `.env`.
+    > - Nếu dùng Database mặc định, bạn không cần sửa `POSTGRES_URL`.
+
+2.  Chạy ứng dụng:
+    ```bash
+    docker-compose up -d
+    ```
+
+3.  Cập nhật phiên bản mới nhất:
+    ```bash
+    docker-compose pull
+    docker-compose up -d
+    ```
+
+4.  Truy cập Admin Dashboard tại `http://localhost:8000`.
+
+### Cấu hình Docker Compose
+File `docker-compose.yml` bao gồm:
+-   `bot`: Sử dụng image `fevirtus/virtus-bot:latest`.
+-   `db`: PostgreSQL 15 (chạy song song phục vụ cho bot).
+    -   Dữ liệu được lưu tại volume `postgres_data`.
+

@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  bot:
+    image: fevirtus/virtus-bot:latest
+    container_name: virtus_bot
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - POSTGRES_URL=${POSTGRES_URL:-postgresql+asyncpg://virtus:password@db:5432/virtus_bot}
+    depends_on:
+      - db
+    command: uv run python main.py
+
+  db:
+    image: postgres:15-alpine
+    container_name: virtus_db
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-virtus}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-virtus_bot}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
