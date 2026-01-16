@@ -428,35 +428,88 @@ class FootballCog(commands.Cog):
 
     @tasks.loop(minutes=2)
     async def check_matches(self):
-        subs = await self.repo.get_all_subscriptions()
-        if not subs: return
-
-        guild_ids = set(s.guild_id for s in subs)
+        # 1. Fetch Subscription Data
+        explicit_subs = await self.repo.get_all_subscriptions()
         
-        for gid in guild_ids:
+        # 2. Identify Active Guilds (from DB subs or just iterate known guilds if possible, 
+        # but for efficiency we can just check guilds that have *some* config or sub)
+        # For simplicity, let's mix: Guilds with explicit subs + Guilds the bot is in (to check config)
+        
+        active_guild_ids = set(s.guild_id for s in explicit_subs)
+        # Also add guilds where bot is present (to check for Config-only users)
+        for g in self.bot.guilds:
+            active_guild_ids.add(g.id)
+            
+        for gid in active_guild_ids:
             api = await self._get_api(gid)
             if not api: continue
             
             matches = await api.get_matches_today()
             if not matches: continue
             
-            guild_subs = [s for s in subs if s.guild_id == gid]
+            # --- Build Effective Subscription List for this Guild ---
+            effective_subs = []
             
+            # A. Explicit Subs (Database)
+            guild_explicit = [s for s in explicit_subs if s.guild_id == gid]
+            for s in guild_explicit:
+                # We normalize to a simple structure
+                effective_subs.append({
+                    "team_name": s.team_name,
+                    "team_id": s.team_id,
+                    "channel_id": s.channel_id
+                })
+                
+            # B. Implicit Subs (Config)
+            # Fetch Configs
+            cfg_teams_str = await self.config_repo.get(gid, "FOOTBALL_TEAMS", "")
+            cfg_channels_str = await self.config_repo.get(gid, "CHANNEL_FOOTBALL_IDS", "")
+            
+            if cfg_teams_str and cfg_channels_str:
+                # Parse Teams
+                teams = [t.strip() for t in cfg_teams_str.split(',') if t.strip()]
+                # Parse Channels
+                channels = [int(c.strip()) for c in cfg_channels_str.split(',') if c.strip().isdigit()]
+                
+                # Create combinatorial subs (All Configured Teams -> All Configured Channels)
+                for t in teams:
+                    for c in channels:
+                        # Avoid duplicates if already in explicit subs
+                        if any(s['team_name'].lower() == t.lower() and s['channel_id'] == c for s in effective_subs):
+                            continue
+                        
+                        effective_subs.append({
+                            "team_name": t,     # Name based matching
+                            "team_id": None,    # ID might be unknown without search, rely on name match
+                            "channel_id": c
+                        })
+            
+            if not effective_subs: continue
+
             for m in matches:
                 mid = m['id']
-                home_id = m['homeTeam']['id']
-                away_id = m['awayTeam']['id']
+                home = m['homeTeam']['name']
+                away = m['awayTeam']['name']
+                # home_id = m['homeTeam']['id']
+                # away_id = m['awayTeam']['id']
                 status = m['status']
                 match_time = datetime.fromisoformat(m['utcDate'].replace('Z', '+00:00'))
                 
-                relevant_subs = [s for s in guild_subs if s.team_id in [home_id, away_id]]
+                # Filter Subs relevant to this match
+                relevant_subs = []
+                for s in effective_subs:
+                    # Match by Name (Flexible) because Config might only have Name
+                    if self._is_interested(home, [s['team_name']]) or self._is_interested(away, [s['team_name']]):
+                        relevant_subs.append(s)
+                        
                 if not relevant_subs: continue
                 
                 # 1. Upcoming Notification
                 if status == 'TIMED': 
-                    now = datetime.utcnow().replace(tzinfo=match_time.tzinfo)
+                    now = datetime.now(match_time.tzinfo) # Use match timezone
                     diff = (match_time - now).total_seconds()
                     
+                    # 9 to 11 minutes before
                     if 540 <= diff <= 660:
                         if mid not in self._notified_upcoming:
                             await self._notify(relevant_subs, m, "UPCOMING")
@@ -485,7 +538,14 @@ class FootballCog(commands.Cog):
         
         embed = discord.Embed(title=title, description=desc, color=color)
         
-        target_channels = set(s.channel_id for s in subs)
+        # Deduplicate channels
+        # handle both obj and dict (during migration/hybrid state if not fully replaced)
+        target_channels = set()
+        for s in subs:
+            if isinstance(s, dict):
+                target_channels.add(s['channel_id'])
+            else:
+                target_channels.add(s.channel_id)
         
         for cid in target_channels:
             channel = self.bot.get_channel(cid)
