@@ -365,12 +365,13 @@ class Cultivation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        # Reconnecting must not count disconnected voice time.
+        for guild in self.bot.guilds:
+            await self.setup_guild(guild)
+        # Load persisted exclusions before establishing the voice baseline.
+        # Reconnecting must not count disconnected/setup time.
         async with self.voice_lock:
             self.voice_members = {g.id: eligible_voice(g, self.ignored.get(g.id, [])) for g in self.bot.guilds}
             self.voice_last = {g.id: time.monotonic() for g in self.bot.guilds}
-        for guild in self.bot.guilds:
-            await self.setup_guild(guild)
         if not self.tick.is_running():
             self.tick.start()
 
@@ -651,8 +652,14 @@ class Cultivation(commands.Cog):
             values['ignored_channels'] = sorted(ignored)
         elif mode in ('merged', 'separate'):
             values['channel_mode'] = mode
+        if mode in ('ignore', 'include', 'enable', 'pause'):
+            await self.voice_flush(interaction.guild)
         await self.store.configure(interaction.guild_id, values)
         self.ignored[interaction.guild_id] = values.get('ignored_channels', resources.get('ignored_channels', []))
+        if mode in ('ignore', 'include', 'enable', 'pause'):
+            async with self.voice_lock:
+                self.voice_members[interaction.guild_id] = eligible_voice(interaction.guild, self.ignored[interaction.guild_id])
+                self.voice_last[interaction.guild_id] = time.monotonic()
         if mode in ('merged', 'separate'):
             await provision(self.bot, interaction.guild, self.store, Panel(self))
         _, resources = await self.store.snapshot(interaction.guild_id)

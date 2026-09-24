@@ -88,9 +88,10 @@ class DiscordTests(unittest.IsolatedAsyncioTestCase):
         def member(uid, bot=False, deaf=False, mute=False):
             return NS(id=uid, bot=bot, voice=NS(self_deaf=deaf, deaf=False, afk=False, suppress=False, self_mute=mute))
         a, b = member(1), member(2, mute=True)
-        channel = NS(members=[a, b, member(3, bot=True), member(4, deaf=True)])
+        channel = NS(id=99, members=[a, b, member(3, bot=True), member(4, deaf=True)])
         guild = NS(voice_channels=[channel], stage_channels=[], afk_channel=None)
         self.assertEqual(set(eligible_voice(guild)), {1, 2})
+        self.assertFalse(eligible_voice(guild, ignored=[99]))
         channel.members = [a, member(3, bot=True)]
         self.assertFalse(eligible_voice(guild))
         channel.members = [a, b]
