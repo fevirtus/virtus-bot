@@ -84,6 +84,15 @@ class Features(unittest.TestCase):
         E.player(self.s, 3, 'Three', self.now, self.rng)
         self.assertEqual(E.boss_target(self.s), target)
 
+    def test_old_week_boss_damage_not_applied_to_new_boss(self):
+        E.upgrade_state(self.s, self.now)
+        old_week = R.week_key(self.now)
+        later = self.now+8*86400
+        self.s['jobs']['old'] = {'kind':'combat','realm':0,'users':['1'],
+            'due':later, 'reward_week':old_week, 'results':{'1':{'message':'done','boss_damage':1000}}}
+        E.settle(self.s, later)
+        self.assertEqual(self.s['sect']['boss_damage'], 0)
+
     def test_inventory_filter_and_discord_length(self):
         for r in range(5):
             for item in R.NAMES:

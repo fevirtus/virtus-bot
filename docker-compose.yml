@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   bot:
-    image: fevirtus/virtus-bot:latest
+    image: ${VIRTUS_IMAGE:-ghcr.io/fevirtus/virtus-bot:latest}
     container_name: virtus_bot
     restart: always
     ports:
@@ -17,7 +17,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-virtus_bot}
     depends_on:
       - db
-    command: uv run python main.py
+    command: /app/.venv/bin/python main.py
 
   db:
     image: postgres:15-alpine

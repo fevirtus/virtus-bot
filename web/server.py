@@ -159,8 +159,6 @@ async def set_config_legacy(item: ConfigItem):
 async def delete_config_legacy(key: str):
     return await delete_guild_config(0, key)
 
-# Mount static files
-app.mount("/", StaticFiles(directory="web/static", html=True), name="static")
 
 def run_web():
     uvicorn.run(app, host="0.0.0.0", port=8000)
@@ -187,3 +185,7 @@ async def ready_health(request: Request):
     except Exception:
         raise HTTPException(status_code=503, detail='Database not ready')
     return {'status': 'ready'}
+
+
+# Keep catch-all static mount last, after API and health routes.
+app.mount("/", StaticFiles(directory="web/static", html=True), name="static")

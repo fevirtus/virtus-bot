@@ -178,7 +178,7 @@ def settle(state, now):
                 p['craft_pity'][result['recipe_key']] = result['pity']
             if result.get('points'):
                 points(state, user, result['points'], job['due'])
-            if result.get('boss_damage') and R.week_key(job['due']) == R.week_key(now):
+            if result.get('boss_damage') and job.get('reward_week', R.week_key(job['due'])) == R.week_key(now):
                 sect = state['sect']
                 if sect['week'] != R.week_key(now):
                     points(state, user, 0, now)
@@ -657,7 +657,7 @@ def start_battle(state, users, kind, now, rng, action_id, ready=None):
                          'boss_damage': round(final['participants'][user].get('damage', 0)/(2**realm)) if kind == 'sect_boss' and eligible[user] else 0}
     state['jobs'][action_id] = {'kind': 'combat', 'realm': realm, 'users': list(users),
                                'due': now+duration, 'results': results, 'version': R.VERSION,
-                               'combat': final, 'first_stage': first if kind == 'dungeon' else None}
+                               'reward_week': R.week_key(now), 'combat': final, 'first_stage': first if kind == 'dungeon' else None}
     if kind == 'dungeon' and first['won']:
         state['jobs'][action_id]['encounter'] = {
             'owner': users[0], 'opens': now+first['seconds'], 'expires': now+first['seconds']+60,
