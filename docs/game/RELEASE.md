@@ -30,4 +30,12 @@ Backup local nằm trong thư mục riêng tư `/private/tmp/virtus-release`; ch
 
 ## Bản sửa trải nghiệm — 2026-09-24
 
-Đang kiểm thử và chuẩn bị rollout; chưa coi thay đổi local là production. Phạm vi D033: giải thích tư chất, điều hướng cá nhân, bảng hoạt động bền vững, thưởng thực nhận và sửa hiệu ứng Nghịch Thiên. Bot hiện chỉ tham gia server được chủ bot yêu cầu giữ lại; không cần thiết lập lại các server đã rời. Mô phỏng 100 nhân vật sau sửa đạt Trúc Cơ trung bình 10,79 ngày (`balance/runtime-ux-fix-results.json`).
+Đã rollout thành công. Phạm vi D033: giải thích tư chất, điều hướng cá nhân, bảng hoạt động bền vững, thưởng thực nhận và sửa hiệu ứng Nghịch Thiên. Bot hiện chỉ tham gia server được chủ bot yêu cầu giữ lại; không cần thiết lập lại các server đã rời. Mô phỏng 100 nhân vật sau sửa đạt Trúc Cơ trung bình 10,79 ngày (`balance/runtime-ux-fix-results.json`).
+
+
+- Source commit: `c07f84780d8070819558bbb32590602044bfe07a`.
+- Image: `ghcr.io/fevirtus/virtus-bot@sha256:a6cf44d22b207361ddcd630f17a664e88a28e07823ba21ada074a0c0d83ec709`.
+- [CI thành công](https://github.com/fevirtus/virtus-bot/actions/runs/35951604013): 46 kiểm thử engine/adapter/HTTP/PostgreSQL và 9 kiểm thử mô hình lịch sử. Image cũng kiểm thử thành công trên worker trước rollout (5 test DB bỏ qua ở pod kiểm thử không chứa secret).
+- Live: health alive/ready, Discord xác nhận chỉ còn một server; 2 bảng hoạt động thật đã tạo và đọc lại được qua API, 1 kết quả hoạt động mới đã quyết toán, 1 hoạt động vẫn đang chạy tại thời điểm xác nhận. Tư chất của các nhân vật hiện có render được với giải thích, không có dictionary thô. Không mô phỏng click bằng tài khoản người chơi trên client Discord.
+- Mở lại `/tutien` để nhận giao diện mới. Các tin tương tác cá nhân đã mở trước rollout không được sửa tự động.
+- Rollback bản UX này về digest `12c39496e4c077c6d5b98bf8e22b2daf1c603e9c04a6f60d10763759782e933c` (GHCR, cùng repo image) giữ nguyên các health paths `/health/live` và `/health/ready`. Không restore database khi chỉ rollback code.
