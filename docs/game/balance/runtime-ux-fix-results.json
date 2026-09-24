@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "seed_range": [
+    0,
+    99
+  ],
+  "horizon": 240,
+  "realms": {
+    "Trúc Cơ": {
+      "reached": 100,
+      "total": 100,
+      "mean_days": 10.79,
+      "p10": 6.188,
+      "p90": 17.188
+    },
+    "Kim Đan": {
+      "reached": 100,
+      "total": 100,
+      "mean_days": 32.69,
+      "p10": 24.354,
+      "p90": 41.167
+    },
+    "Nguyên Anh": {
+      "reached": 100,
+      "total": 100,
+      "mean_days": 81.35,
+      "p10": 69.333,
+      "p90": 92.208
+    },
+    "Hóa Thần": {
+      "reached": 100,
+      "total": 100,
+      "mean_days": 179.43,
+      "p10": 163.229,
+      "p90": 193.312
+    }
+  },
+  "mean_final_coins": 39988.22
+}

@@ -12,6 +12,7 @@ from infra.db import postgres
 from services.cultivation import engine as E, rules as R
 from services.cultivation.bootstrap import provision, SetupError
 from services.cultivation.store import GameStore
+from services.cultivation.presentation import STRATEGIES, GUIDE, aptitude_text, progress_lines
 
 log = logging.getLogger(__name__)
 
@@ -31,25 +32,47 @@ def eligible_voice(guild, ignored=()):
 
 def profile_text(state, uid):
     p = state['players'][str(uid)]
-    g = p['genetics']
-    lines = [f"**{R.realm_name(p)} · tầng {p['tier']+1}** — {p['xp']:g}/{R.cap(p)} tu vi",
-             f"Linh thạch: **{p['coins']}** · Chiến thuật: {p['strategy']} · Đan mang theo: {p['potions']}",
-             f"Linh căn {g['root']} · {', '.join(g['talents'])}",
-             f"Chỉ số: {g['stats']} · Cơ duyên {g['fortune']} · Kiếp số {g['calamity']}"]
+    lines = [f"**{R.realm_name(p)} · tầng {p['tier']+1}**",
+             f"Tu vi (kinh nghiệm): **{p['xp']:g}/{R.cap(p)}** · Linh thạch: **{p['coins']}**",
+             f"Chiến thuật: **{STRATEGIES[p['strategy']]}** · Tối đa **{p['potions']} Hồi Xuân Đan/trận**",
+             f"Linh căn **{p['genetics']['root']}** · Thiên phú: **{', '.join(p['genetics']['talents'])}**",
+             'Bấm **Tư chất & thiên phú** để xem tác dụng và so sánh bộ mới.']
+    if not p['active']:
+        lines.append('⏸ Bạn đang ngừng tu luyện. Bật lại trong mục Hồ sơ và tu luyện.')
+    if R.cap(p) and p['xp'] >= R.cap(p):
+        need = f"{R.MINOR_COST[p['tier']]} Tụ Khí Đan" if p['tier'] < 8 else 'đan đại đột phá, linh vật từ boss và linh thạch'
+        lines.append(f'**Tu vi đã đầy** — cần {need} để đột phá. Tu vi vượt mức không được tích thêm.')
     if p['candidate']:
-        lines.append(f"**Bộ roll mới:** {p['candidate']}")
+        lines.append('Có bộ tư chất mới **chưa áp dụng**. Mở Tư chất & thiên phú để so sánh trước khi chọn.')
     if p['injury_until'] > time.time():
-        lines.append(f"Trọng thương đến <t:{int(p['injury_until'])}:R>.")
-    for job in state['jobs'].values():
-        if str(uid) in job['users']:
-            lines.append(f"{job['kind']}: hoàn tất <t:{int(job['due'])}:R>.")
-            e = job.get('encounter')
-            if e and e['owner'] == str(uid) and not e['choice'] and e['expires'] > time.time():
-                lines.append(f"Dấu tích phó bản: mở <t:{int(e['opens'])}:R>, hết hạn <t:{int(e['expires'])}:R>; bỏ qua tự động nếu không chọn.")
+        lines.append(f"Trọng thương đến <t:{int(p['injury_until'])}:R>: giảm tu vi nhận và sức chiến đấu.")
+    lines.append('\n**Hoạt động đang chạy**')
+    lines.extend(progress_lines(state, uid, time.time()) or ['Đang rảnh. Chọn Thám hiểm và chiến đấu hoặc Luyện đan để bắt đầu.'])
     if p['event']:
-        lines.append('**Gặp dấu tích bí ẩn.** Chọn quan sát, mở hoặc rời đi trong mục Kỳ ngộ.')
-    lines.extend(x['text'] for x in p['inbox'][-2:])
+        lines.append(f"**Có dấu tích bí ẩn** đến <t:{int(p['event']['expires'])}:R>. Chọn quan sát, mở hoặc rời đi trong mục Kỳ ngộ.")
+    lines.append(f"\nHộp thư: {len(p['inbox'])} kết quả gần đây · DM: {'Bật' if p['notifications'] else 'Tắt'}.")
+    return '\n'.join(lines)
+
+
+def activity_text(state, uid):
+    p = state['players'][str(uid)]
+    lines = progress_lines(state, uid, time.time()) or ['**Đã hoàn tất các hoạt động.**']
+    recent = [x for x in p['inbox'] if x.get('activity')][-2:]
+    if recent:
+        lines.append('\n**Kết quả gần nhất**')
+        lines.extend(f"<t:{int(x['time'])}:f>\n{x['text']}" for x in reversed(recent))
+    lines.append('\nPhần thưởng đã nhận tự vào túi. Mở /tutien → Hộp thư để xem lịch sử đầy đủ.')
     return '\n'.join(lines)[:3900]
+
+
+async def personal_reply(interaction, content=None, embed=None, view=None):
+    """Refresh the user's private panel; never edit a shared server board."""
+    if interaction.message and interaction.message.flags.ephemeral:
+        await interaction.edit_original_response(content=content, embed=embed, view=view,
+                                                  allowed_mentions=discord.AllowedMentions.none())
+    else:
+        await interaction.followup.send(content=content, embed=embed, view=view, ephemeral=True,
+                                        allowed_mentions=discord.AllowedMentions.none())
 
 
 class OwnedView(discord.ui.View):
@@ -72,9 +95,10 @@ class OwnedView(discord.ui.View):
 
 
 class Confirm(OwnedView):
-    def __init__(self, cog, uid, op, args, quoted):
+    def __init__(self, cog, uid, op, args, quoted, action_id):
         super().__init__(cog, uid, 120)
         self.op, self.args, self.quoted = op, args, quoted
+        self.action_id = f'confirm:{action_id}'
         self.done = False
 
     @discord.ui.button(label='Xác nhận', style=discord.ButtonStyle.success)
@@ -88,20 +112,22 @@ class Confirm(OwnedView):
             if self.op == 'upgrade' and interaction.user.id != interaction.guild.owner_id:
                 raise E.GameError('Chỉ chủ server hiện tại được nâng cấp.')
             text = await self.cog.store.act(interaction.guild_id, self.uid, interaction.user.display_name,
-                                            interaction.message.id, self.op,
+                                            self.action_id, self.op,
                                             dict(self.args, _quote=self.quoted))
             if self.op == 'roll':
                 state, _ = await self.cog.store.snapshot(interaction.guild_id)
-                text += '\n'+profile_text(state, self.uid)
+                text += '\n\n'+aptitude_text(state['players'][str(self.uid)])
+            if self.op in ('hunt', 'dungeon', 'sect_boss', 'craft'):
+                text += await self.cog.activity_link(interaction.guild, self.uid)
             await interaction.edit_original_response(content=None, embed=discord.Embed(description=text[:3900], color=0x477b65), view=Personal(self.cog, self.uid))
             await self.cog.sync_roles(interaction.guild)
         except E.GameError as error:
-            await interaction.edit_original_response(content=str(error), view=None)
+            await interaction.edit_original_response(content=str(error), embed=None, view=None)
 
     @discord.ui.button(label='Hủy', style=discord.ButtonStyle.secondary)
     async def cancel(self, interaction, button):
         self.done = True
-        await interaction.response.edit_message(content='Đã hủy, chưa chi vật phẩm.', view=None)
+        await interaction.response.edit_message(content='Đã hủy, chưa chi vật phẩm.', embed=None, view=None)
 
 
 class Pages(OwnedView):
@@ -115,12 +141,12 @@ class Pages(OwnedView):
     @discord.ui.button(label='Trước')
     async def previous(self, interaction, button):
         self.index = (self.index-1) % len(self.pages)
-        await interaction.response.edit_message(content=self.text(), view=self)
+        await interaction.response.edit_message(content=self.text(), embed=None, view=self)
 
     @discord.ui.button(label='Tiếp')
     async def next_page(self, interaction, button):
         self.index = (self.index+1) % len(self.pages)
-        await interaction.response.edit_message(content=self.text(), view=self)
+        await interaction.response.edit_message(content=self.text(), embed=None, view=self)
 
     @discord.ui.button(label='Hồ sơ')
     async def home(self, interaction, button):
@@ -195,7 +221,7 @@ class BagView(Pages):
         state, _ = await self.cog.store.snapshot(interaction.guild_id)
         self.pages = paginate(inventory_lines(state['players'][str(self.uid)], self.query, self.realm, self.quality))
         self.index = 0
-        await interaction.edit_original_response(content=self.text(), view=self)
+        await interaction.edit_original_response(content=self.text(), embed=None, view=self)
 
     @discord.ui.button(label='Tìm kiếm', row=3)
     async def search(self, interaction, button):
@@ -215,12 +241,12 @@ class ActionSelect(discord.ui.Select):
 
 class Personal(OwnedView):
     def __init__(self, cog, uid):
-        super().__init__(cog, uid)
+        super().__init__(cog, uid, timeout=900)
         self.add_item(ActionSelect(cog, uid, [
             ('Hồ sơ / cập nhật', 'show', {}, False), ('Túi đồ', 'bag', {}, False),
             ('Hộp thư', 'inbox', {}, False), ('Đột phá', 'breakthrough', {}, True),
             ('Đại đột phá + Hộ Mạch Đan', 'breakthrough', {'guard': True}, True),
-            ('Roll tư chất', 'roll', {}, True), ('Nhận bộ mới', 'accept_roll', {}, False),
+            ('Tạo lại tư chất', 'roll', {}, True), ('Nhận bộ mới', 'accept_roll', {}, False),
             ('Giữ bộ cũ', 'keep_roll', {}, False), ('Dưỡng thương', 'heal_injury', {}, True),
             ('Tông môn', 'sect', {}, False), ('Bảng xếp hạng', 'ranking', {}, False),
             ('Bật / ngừng tu luyện', 'toggle', {}, True),
@@ -259,6 +285,23 @@ class Personal(OwnedView):
             (f'Hướng tu · {label}', 'path', {'value': value}, True)
             for label, value in [('Kiếm tu', 'sword'), ('Thể tu', 'body'), ('Pháp tu', 'mage')]
         ], 'Cài đặt chiến đấu'))
+
+
+    @discord.ui.button(label='Cập nhật', row=4)
+    async def refresh(self, interaction, button):
+        await self.cog.action(interaction, 'show', {}, False)
+
+    @discord.ui.button(label='Tư chất & thiên phú', row=4)
+    async def aptitude(self, interaction, button):
+        await self.cog.action(interaction, 'aptitude', {}, False)
+
+    @discord.ui.button(label='Hướng dẫn', row=4)
+    async def guide(self, interaction, button):
+        await self.cog.action(interaction, 'guide', {}, False)
+
+    @discord.ui.button(label='Hộp thư', row=4)
+    async def inbox_button(self, interaction, button):
+        await self.cog.action(interaction, 'inbox', {}, False)
 
 
 class Panel(discord.ui.View):
@@ -314,6 +357,8 @@ class Lobby(discord.ui.View):
                 content += '\nSẵn sàng chấp thuận ngân sách đan đã lưu và chủ đội chọn kỳ ngộ (chỉ ảnh hưởng linh thạch chặng boss). Hết lượt vẫn hỗ trợ, không thưởng.'
             await interaction.message.edit(content=content, view=Lobby(self.cog) if room else None,
                                            allowed_mentions=discord.AllowedMentions.none())
+            if op == 'room_start':
+                text += await self.cog.activity_link(interaction.guild, interaction.user.id)
             await interaction.followup.send(text, ephemeral=True)
         except E.GameError as error:
             await interaction.followup.send(str(error), ephemeral=True)
@@ -346,6 +391,8 @@ class Cultivation(commands.Cog):
         self.ignored = {}
         self.board_cache = {}
         self.delivery_lock = asyncio.Lock()
+        self.activity_lock = asyncio.Lock()
+        self.activity_cache = {}
 
     async def cog_load(self):
         self.bot.add_view(Panel(self))
@@ -473,6 +520,57 @@ class Cultivation(commands.Cog):
                 except discord.HTTPException:
                     log.warning('Notice delivery deferred guild=%s event=%s', guild.id, key)
 
+    async def update_activities(self, guild):
+        # One durable message per player; edits survive ephemeral token expiry and restarts.
+        async with self.activity_lock:
+            state, resources = await self.store.snapshot(guild.id)
+            channel = guild.get_channel(resources.get('game_channel', 0))
+            if not channel:
+                return
+            for uid, p in state['players'].items():
+                if not p.get('activity_tracking') or not guild.get_member(int(uid)):
+                    continue
+                content = activity_text(state, uid)
+                key = f'activity_message_{uid}'
+                saved = resources.get(key, {})
+                cache_key = (guild.id, uid)
+                if self.activity_cache.get(cache_key) == (channel.id, saved.get('id'), content):
+                    continue
+                try:
+                    message = None
+                    if saved.get('channel') == channel.id and saved.get('id'):
+                        try:
+                            message = await channel.fetch_message(saved['id'])
+                        except discord.NotFound:
+                            pass
+                    marker = f'virtus:activity:{guild.id}:{uid}'
+                    if message is None:
+                        async for old in channel.history(limit=100):
+                            if old.author.id == self.bot.user.id and any(e.footer.text == marker for e in old.embeds):
+                                message = old
+                                break
+                    embed = discord.Embed(title='Hoạt động · '+p['name'], description=content, color=0x477b65)
+                    embed.set_footer(text=marker)
+                    if message:
+                        await message.edit(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+                    else:
+                        message = await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+                    await self.store.resource(guild.id, key, {'id': message.id, 'channel': channel.id})
+                    self.activity_cache[cache_key] = (channel.id, message.id, content)
+                except discord.HTTPException:
+                    log.warning('Activity board deferred guild=%s user=%s', guild.id, uid)
+
+    async def activity_link(self, guild, uid):
+        try:
+            await self.update_activities(guild)
+            _, resources = await self.store.snapshot(guild.id)
+            saved = resources.get(f'activity_message_{uid}')
+            if saved:
+                return f"\n[Theo dõi tiến trình và kết quả](https://discord.com/channels/{guild.id}/{saved['channel']}/{saved['id']}) · Bảng công khai ở kênh tu tiên, cập nhật khoảng 30 giây/lần."
+        except Exception:
+            log.exception('Activity link deferred guild=%s', guild.id)
+        return '\nBảng hoạt động tạm chưa mở được; kết quả vẫn tự lưu vào Hộp thư. Bot sẽ thử cập nhật bảng lại.'
+
     async def update_board(self, guild):
         state, resources = await self.store.snapshot(guild.id)
         channel = guild.get_channel(resources.get('sect_channel', 0))
@@ -515,6 +613,7 @@ class Cultivation(commands.Cog):
             for guild in self.bot.guilds:
                 await self.voice_flush(guild)
                 try:
+                    await self.update_activities(guild)
                     await self.sync_roles(guild)
                     await self.deliver_notices(guild)
                     await self.update_board(guild)
@@ -533,17 +632,21 @@ class Cultivation(commands.Cog):
             p = state['players'][str(interaction.user.id)]
             if confirm:
                 quoted = E.quote(state, interaction.user.id, op, args)
-                await interaction.followup.send(quoted, view=Confirm(self, interaction.user.id, op, args, quoted), ephemeral=True)
+                await personal_reply(interaction, quoted, view=Confirm(self, interaction.user.id, op, args, quoted, interaction.id))
                 return
             if op == 'show':
                 text = profile_text(state, interaction.user.id)
+            elif op == 'aptitude':
+                text = aptitude_text(p)
+            elif op == 'guide':
+                text = GUIDE
             elif op == 'bag':
                 view = BagView(self, interaction.user.id, p, args.get('query', ''), args.get('realm'), args.get('quality'))
-                await interaction.followup.send(view.text(), view=view, ephemeral=True)
+                await personal_reply(interaction, view.text(), view=view)
                 return
             elif op == 'inbox':
-                view = Pages(self, interaction.user.id, paginate([x['text'] for x in reversed(p['inbox'])]))
-                await interaction.followup.send(view.text(), view=view, ephemeral=True)
+                view = Pages(self, interaction.user.id, paginate([f"<t:{int(x['time'])}:f>\n{x['text']}" for x in reversed(p['inbox'])]))
+                await personal_reply(interaction, view.text(), view=view)
                 return
             elif op == 'sect':
                 s = state['sect']
@@ -563,6 +666,11 @@ class Cultivation(commands.Cog):
             else:
                 text = await self.store.act(interaction.guild_id, interaction.user.id, interaction.user.display_name,
                                             interaction.id, op, args)
+                if op == 'explore':
+                    text += await self.activity_link(interaction.guild, interaction.user.id)
+                if op in ('accept_roll', 'keep_roll'):
+                    state, _ = await self.store.snapshot(interaction.guild_id)
+                    text += '\n\n'+aptitude_text(state['players'][str(interaction.user.id)])
                 if op == 'room_create':
                     channel = interaction.guild.get_channel(resources.get('game_channel', 0))
                     if channel is None:
@@ -581,8 +689,9 @@ class Cultivation(commands.Cog):
                         msg = await channel.send(embed=embed, view=Lobby(self), allowed_mentions=discord.AllowedMentions.none())
                     await self.store.bind_room(interaction.guild_id, rid, msg.id)
                     text = f'Đã mở đội: {msg.jump_url}'
-            await interaction.followup.send(embed=discord.Embed(description=text[:3900], color=0x477b65), view=Personal(self, interaction.user.id), ephemeral=True,
-                                            allowed_mentions=discord.AllowedMentions.none())
+            embed = discord.Embed(description=text[:3900], color=0x477b65)
+            embed.set_footer(text='Bảng cá nhân: bấm Cập nhật để lấy trạng thái mới. Nút hết hạn? Mở lại /tutien.')
+            await personal_reply(interaction, embed=embed, view=Personal(self, interaction.user.id))
         except E.GameError as error:
             await interaction.followup.send(str(error), ephemeral=True)
 

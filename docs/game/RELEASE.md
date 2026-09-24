@@ -27,3 +27,7 @@ Trạng thái: đã triển khai thành công và kiểm chứng trực tiếp t
 Nếu bản mới không kết nối Discord/database hoặc không vượt readiness, đưa deployment về image cũ ở trên với `kubectl -n virtus-bot set image deployment/virtus-bot bot=<image-cũ>` và đổi đường dẫn của cả startupProbe, livenessProbe, readinessProbe về `/` trước khi theo dõi rollout: image cũ chưa có `/health/live` và `/health/ready`. Các bảng tu tiên thêm mới không cần xóa; dữ liệu tính năng cũ được giữ nguyên. Không restore backup đè lên dữ liệu mới chỉ để rollback code.
 
 Backup local nằm trong thư mục riêng tư `/private/tmp/virtus-release`; chủ máy nên chuyển sang vị trí backup lâu dài phù hợp nếu cần giữ lâu. Script `backup_database.py` là logical snapshot các bảng ứng dụng, không phải bản sao toàn bộ role/extension/server PostgreSQL.
+
+## Bản sửa trải nghiệm — 2026-09-24
+
+Đang kiểm thử và chuẩn bị rollout; chưa coi thay đổi local là production. Phạm vi D033: giải thích tư chất, điều hướng cá nhân, bảng hoạt động bền vững, thưởng thực nhận và sửa hiệu ứng Nghịch Thiên. Bot hiện chỉ tham gia server được chủ bot yêu cầu giữ lại; không cần thiết lập lại các server đã rời. Mô phỏng 100 nhân vật sau sửa đạt Trúc Cơ trung bình 10,79 ngày (`balance/runtime-ux-fix-results.json`).

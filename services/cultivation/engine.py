@@ -5,6 +5,7 @@ from collections import Counter
 
 from . import rules as R
 from .combat import battle
+from .presentation import STRATEGIES, ACTIVITIES, result_text
 
 
 class GameError(ValueError):
@@ -29,6 +30,9 @@ def upgrade_state(state, now):
         p.setdefault('recipes', [])
         p.setdefault('inbox_seq', 0)
         p.setdefault('chat_hashes', [])
+    for job in state['jobs'].values():
+        for uid in job['users']:
+            state['players'][uid]['activity_tracking'] = True
     state['version'] = R.VERSION
     reset_week(state, now)
 
@@ -100,9 +104,9 @@ def pay(p, amount):
     p['coins'] -= amount
 
 
-def inbox(p, text, now):
+def inbox(p, text, now, activity=False):
     p['inbox_seq'] = p.get('inbox_seq', 0)+1
-    p['inbox'].append({'id': p['inbox_seq'], 'time': now, 'text': text})
+    p['inbox'].append({'id': p['inbox_seq'], 'time': now, 'text': text, 'activity': activity})
     p['inbox'] = p['inbox'][-30:]
 
 
@@ -171,8 +175,9 @@ def settle(state, now):
             p['coins'] += result.get('coins', 0)
             for key, amount in result.get('items', {}).items():
                 p['inventory'][key] = p['inventory'].get(key, 0)+amount
+            actual_xp = 0
             if p['realm'] == job['realm']:
-                xp(p, result.get('xp', 0), job['due'], promised=True)
+                actual_xp = xp(p, result.get('xp', 0), job['due'], promised=True)
             if job['kind'] == 'craft':
                 p['profession_xp'] += result['profession_xp']
                 p['craft_pity'][result['recipe_key']] = result['pity']
@@ -188,16 +193,24 @@ def settle(state, now):
                     notice(state, 'achievement', user, 'Tông môn đã hạ boss tuần! Thành viên đã đóng góp có thể nhận thưởng ở bảng tông môn.', job['due'])
                 if user not in sect.setdefault('boss_members', []):
                     sect['boss_members'].append(user)
-            if result.get('event') and not p['event']:
+            discovered = bool(result.get('event') and not p['event'] and result['event']['expires'] > now)
+            if discovered:
                 p['event'] = result['event']
+            conversions = []
             for r in range(len(R.REALMS)):
                 fragments = bag(p, 'fragment', r)
                 if fragments >= 5:
                     give(p, 'fragment', -(fragments//5)*5, r)
                     give(p, 'relic', fragments//5, r)
-            inbox(p, result['message'], job['due'])
+                    conversions.append(f"Đã tự ghép {fragments//5*5} Mảnh linh vật thành {fragments//5} Linh vật đột phá ({R.REALMS[r]}).")
+            text = result_text(job, result, actual_xp)
+            if conversions:
+                text += '\n'+'\n'.join(conversions)
+            if discovered:
+                text += '\n**Phát hiện dấu tích bí ẩn!** Mở mục Kỳ ngộ để quan sát, mở hoặc rời đi trước <t:'+str(int(p['event']['expires']))+':R>.'
+            inbox(p, text, job['due'], activity=True)
             if p['notifications']:
-                notice(state, 'private', user, result['message'], job['due'])
+                notice(state, 'private', user, text, job['due'])
         del state['jobs'][jid]
     for rid, room in list(state['rooms'].items()):
         if now >= room['expires']:
@@ -238,13 +251,13 @@ def quote(state, user, op, args):
     if op == 'buy':
         return f"Mua {args.get('count', 1)} {R.NAMES.get(args['item'], args['item'])}: {R.SHOP.get(args['item'], 0)*args.get('count', 1)} linh thạch."
     if op in ('hunt', 'dungeon', 'sect_boss'):
-        return f"Auto combat · {p['strategy']}. Mang tối đa {p['potions']} Hồi Xuân Đan; tự dùng khi HP <30%, trả phần chưa dùng. Phần đã dùng không hoàn. Hết lượt thưởng vẫn chơi được nhưng không nhận thêm XP/vật phẩm."
+        return f"**{ACTIVITIES[op]}** · Chiến thuật {STRATEGIES[p['strategy']]}. Tự chiến đấu; bảng hoạt động tại kênh tu tiên sẽ cập nhật kết quả. Mang tối đa {p['potions']} Hồi Xuân Đan; tự dùng khi sinh lực dưới 30%, trả phần chưa dùng. Phần đã dùng không hoàn. {'Mục tiêu: kiếm Yêu huyết để luyện Hồi Xuân Đan.' if op == 'hunt' else 'Mục tiêu: vượt quái đầu đường rồi hạ boss để kiếm Yêu đan và linh vật đột phá.' if op == 'dungeon' else 'Mục tiêu: góp sát thương hạ boss chung của tông môn trong tuần.'} Hết lượt thưởng vẫn chơi được nhưng không nhận thêm tu vi/vật phẩm."
     if op == 'learn':
         item = args['item']
         require(item in R.RESEARCH, 'Công thức không thể nghiên cứu.')
         return f"Học {R.NAMES[item]} vĩnh viễn: {R.RESEARCH[item]['coins']} linh thạch, Tàng Kinh Các cấp {R.RESEARCH[item]['level']}."
     if op == 'focus':
-        return 'Dùng 1 Ngưng Thần Đan đạt chuẩn/thượng phẩm: +10%/+15% mana trận kế tiếp. Không cộng dồn.'
+        return 'Dùng 1 Ngưng Thần Đan đạt chuẩn/thượng phẩm: +10%/+15% linh lực trận kế tiếp. Không cộng dồn.'
     if op == 'upgrade':
         building = args['building']
         require(building in R.BUILDINGS, 'Công trình không hợp lệ.')
@@ -355,8 +368,9 @@ def execute(state, user, op, args, now, rng, action_id):
         result = {'items': dict(items), 'message': f"Luyện {R.NAMES[item]}: {good} thành công, {failed} thất bại. Đã trả thành phẩm/nguyên liệu hoàn vào túi.",
                   'profession_xp': max(1, good*(r+1)*5), 'recipe_key': key, 'pity': pity}
         state['jobs'][action_id] = {'kind': 'craft', 'realm': r, 'users': [user], 'due': now+q['seconds'],
-                                   'version': R.VERSION, 'results': {user: result}}
-        return f"Đã bắt đầu luyện. Hoàn tất sau {q['seconds']//60} phút, tự trả vào túi kể cả offline."
+                                   'version': R.VERSION, 'results': {user: result}, 'item': item, 'started': now}
+        p['activity_tracking'] = True
+        return f"Đã bắt đầu luyện {count} {R.NAMES[item]}. Hoàn tất sau {q['seconds']//60} phút, tự trả vào túi kể cả offline."
     if op == 'breakthrough':
         require(r < len(R.XP), 'Bạn đã đến giới hạn nội dung pilot; cảnh giới tiếp theo sẽ được mở sau.')
         require(not running(state, user) and not occupied_room(state, user), 'Hoàn tất hoạt động/lobby trước khi đột phá.')
@@ -510,7 +524,7 @@ def execute(state, user, op, args, now, rng, action_id):
             reward = 20 if choice == 'inspect' else 50
             p['coins'] += reward*(e['realm']+1)
             give(p, 'flower', 1 if choice == 'inspect' else 2, e['realm'])
-            return 'Cơ duyên: tìm thấy linh thạch và Linh hoa. Đã cất vào túi.'
+            return f"Cơ duyên: +{reward*(e['realm']+1)} linh thạch, +{1 if choice == 'inspect' else 2} Linh hoa. Đã cất vào túi."
         # Hidden ordinary calamity never takes XP, gear or realm progress.
         loss = min(bag(p, 'herb', e['realm']), 1 if choice == 'inspect' else 2)
         give(p, 'herb', -loss, e['realm'])
@@ -528,10 +542,11 @@ def execute(state, user, op, args, now, rng, action_id):
             event = {'seed': rng.getrandbits(64), 'fortune': p['genetics']['fortune'],
                      'calamity': p['genetics']['calamity'], 'realm': r, 'expires': now+86400}
         result = {'coins': 25*(r+1), 'xp': 20, 'items': items, 'points': 2, 'event': event,
-                  'message': f"Thám hiểm hoàn tất: nhận {R.NAMES[area]}, linh thạch và tu vi."}
+                  'message': f"**Thám hiểm hoàn tất · tìm {R.NAMES[area]}**"}
         state['jobs'][action_id] = {'kind': 'explore', 'realm': r, 'users': [user], 'due': now+1200,
-                                   'version': R.VERSION, 'results': {user: result}}
-        return 'Đã lên đường; 20 phút sau tự nhận phần thưởng.'
+                                   'version': R.VERSION, 'results': {user: result}, 'area': area, 'started': now}
+        p['activity_tracking'] = True
+        return f'Đã lên đường tìm **{R.NAMES[area]}**. Thời gian: **20 phút**; lượt thám hiểm hôm nay {d["explore"]}/3. Phần thưởng tự vào túi; xem kết quả tại bảng hoạt động hoặc Hộp thư.'
     if op in ('hunt', 'dungeon', 'sect_boss'):
         require(not occupied_room(state, user), 'Rời đội đang chờ trước khi đánh cá nhân.')
         return start_battle(state, [user], op, now, rng, action_id)
@@ -563,7 +578,7 @@ def execute(state, user, op, args, now, rng, action_id):
             return 'Đã rời đội.'
         if op == 'room_ready':
             room['ready'][user] = {'strategy': p['strategy'], 'potions': p['potions']}
-            return f"Sẵn sàng: {p['strategy']}, tối đa {p['potions']} đan."
+            return f"Sẵn sàng: {STRATEGIES[p['strategy']]}, tối đa {p['potions']} đan."
         require(user == room['owner'], 'Chỉ chủ đội được xuất phát.')
         require(2 <= len(room['members']) <= 4 and all(u in room['ready'] for u in room['members']), 'Cần 2–4 người và tất cả sẵn sàng.')
         result = start_battle(state, room['members'], 'dungeon', now, rng, action_id, room['ready'])
@@ -646,22 +661,22 @@ def start_battle(state, users, kind, now, rng, action_id, ready=None):
             else:
                 d = daily(p, now)
                 d[kind] = d.get(kind, 0)+1
-        text = ('Chiến thắng' if final['won'] else 'Thất bại')+f" · {kind}. "
-        text += f"Dùng {final['participants'][user]['used']} đan; thưởng {coins} linh thạch, {earned} tu vi. "
+        text = '**'+ACTIVITIES[kind]+' · '+('Chiến thắng' if final['won'] else 'Kết thúc lượt đánh' if kind == 'sect_boss' else 'Thất bại')+'**\n'
+        text += f"Đã dùng {final['participants'][user]['used']} Hồi Xuân Đan; sinh lực cuối trận {final['participants'][user]['health']:.0%}. "
         if not eligible[user]:
             text += 'Lượt hỗ trợ, không nhận thưởng. '
         text += ('Đã giữ thưởng chặng đầu. ' if kind == 'dungeon' and first['won'] and not final['won'] else '')
-        text += '\n'.join(final['log'])
+        p['activity_tracking'] = True
         results[user] = {'items': dict(items), 'coins': coins, 'xp': earned, 'points': count, 'message': text,
                          'checkpoint_coins': 12*(realm+1) if kind == 'dungeon' and first['won'] and eligible[user] else 0,
                          'boss_damage': round(final['participants'][user].get('damage', 0)/(2**realm)) if kind == 'sect_boss' and eligible[user] else 0}
     state['jobs'][action_id] = {'kind': 'combat', 'realm': realm, 'users': list(users),
                                'due': now+duration, 'results': results, 'version': R.VERSION,
-                               'reward_week': R.week_key(now), 'combat': final, 'first_stage': first if kind == 'dungeon' else None}
+                               'reward_week': R.week_key(now), 'activity': kind, 'started': now, 'combat': final, 'first_stage': first if kind == 'dungeon' else None}
     if kind == 'dungeon' and first['won']:
         state['jobs'][action_id]['encounter'] = {
             'owner': users[0], 'opens': now+first['seconds'], 'expires': now+first['seconds']+60,
             'seed': rng.getrandbits(64), 'choice': None}
         state['jobs'][action_id]['due'] += 60
         duration += 60
-    return f"Đã xuất chiến auto. Kết quả sau khoảng {duration} giây, kể cả khi bạn offline."
+    return f"**{ACTIVITIES[kind]} đã bắt đầu** · {len(users)} người. Tự chiến đấu trong khoảng **{duration} giây**. Bảng hoạt động tại kênh tu tiên tự cập nhật kết quả, kể cả khi bạn offline; kết quả cũng lưu ở Hộp thư."

@@ -56,13 +56,13 @@ def battle(players, realm, kind, seed):
             factor = 1.04 if f['defiant'] and f['hp'] < .3*f['max'] else 1
             if tick % 3 == 0 and f['mana'] >= 15:
                 f['mana'] -= 15
-                factor = 1.04 if f['defiant'] and f['hp'] < .3*f['max'] else 1.75
+                factor *= 1.75
                 if f['role'] == 'mage':
                     target = min(alive, key=lambda a: a['hp']/a['max'])
                     healed = min(target['max']-target['hp'], .16*target['max'])
                     target['hp'] += healed
                     f['support'] += healed
-                    factor = 1.04 if f['defiant'] and f['hp'] < .3*f['max'] else 1.1
+                    factor = (1.04 if f['defiant'] and f['hp'] < .3*f['max'] else 1)*1.1
             hit = f['atk']*factor*rng.uniform(.9, 1.1)*100/113
             if rng.random() < f['crit']:
                 hit *= 1.5

@@ -181,3 +181,9 @@ Các mốc sau và công thức thử nghiệm vẫn là đề xuất, không de
 ## D032 — Hoàn thiện và triển khai bản 1.0 (2026-09-24)
 
 Người dùng: “hoàn thiệt nốt các tính năng còn thiếu và các bug hiện còn và triển khai thôi”. Triển khai các hạng mục thiếu của pilot theo IMPLEMENTATION.md, dùng cấu hình số ban đầu có thể chỉnh tiếp và mô phỏng trực tiếp runtime. Người dùng đã xác nhận cụm kết nối lại và đồng ý kết nối database theo cấu hình hiện có sau câu hỏi backup. Quyền triển khai không thay đổi các luật tu tiên đã chốt.
+
+## D033 — Sửa trải nghiệm và phản hồi hoạt động (2026-09-24)
+
+Người dùng báo tư chất/thiên phú không có giải thích, không rõ đang đánh gì, thám hiểm thiếu thông báo kết quả. Sửa giao diện tiếng Việt, giải thích hiệu ứng từ runtime, so sánh bộ tư chất, hướng dẫn vòng chơi và tách kết quả cũ khỏi hồ sơ. Thêm bảng hoạt động công khai tại kênh tu tiên cho mỗi người đã bắt đầu hoạt động: sửa cùng một tin để theo dõi tiến trình và kết quả, lưu ID để phục hồi sau restart; không bật DM hộ người chơi. Thông báo xuất phát dẫn tới bảng và nói rõ bảng công khai. Hộp thư vẫn là lịch sử đầy đủ, tài sản quyết toán độc lập với gửi Discord.
+
+Sửa báo tu vi thực nhận khi đầy thanh/trọng thương và liệt kê số lượng/chất lượng vật phẩm. Sửa Nghịch Thiên vô tình thay thế hệ số kỹ năng bằng 1,04 khi thấp máu; đúng là nhân thêm 1,04 vào sát thương kỹ năng. Không thay đổi thời gian thám hiểm hoặc chi phí đột phá. Mô phỏng 100 seed sau sửa ở `balance/runtime-ux-fix-results.json`: Trúc Cơ trung bình 10,79 ngày; đây là mẫu kiểm chứng, không cam kết thời gian từng người.
