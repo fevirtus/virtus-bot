@@ -1,0 +1,123 @@
+{
+  "version": "candidate-002",
+  "status": "PROPOSED_SIMULATION_ONLY",
+  "scope": "Luyen Khi to Truc Co only; no production configuration",
+  "seed": 23092026,
+  "samples_per_profile": 2000,
+  "horizon_days": 120,
+  "tier_xp": [
+    100,
+    150,
+    200,
+    250,
+    300,
+    400,
+    550,
+    700,
+    1200
+  ],
+  "minor_pills": [
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    3,
+    3
+  ],
+  "initial_coins": 120,
+  "minor_recipe": {
+    "herb": 2,
+    "water": 1,
+    "coins": 10
+  },
+  "major_recipe": {
+    "herb": 8,
+    "water": 4,
+    "core": 2,
+    "coins": 60
+  },
+  "minor_minutes": 1,
+  "major_minutes": 10,
+  "craft_success": 0.8,
+  "craft_guaranteed_after_failures": 2,
+  "ritual_coins": 80,
+  "boss_win": 0.85,
+  "boss_whole_drop": 0.1,
+  "boss_fragments_needed": 5,
+  "breakthrough_base": 0.5,
+  "insight_increment": 0.15,
+  "failure_xp_fraction": 0.1,
+  "injury_hours": 6,
+  "injury_xp_multiplier": 0.5,
+  "explore": {
+    "herb": 4,
+    "water": 2,
+    "coins": 25,
+    "xp": 20
+  },
+  "hunt": {
+    "coins": 10,
+    "xp": 15
+  },
+  "boss": {
+    "core": 1,
+    "coins": 50,
+    "xp": 80
+  },
+  "profiles": {
+    "light": {
+      "active_probability": 0.4285714286,
+      "social_xp": [
+        150,
+        300
+      ],
+      "explore": [
+        1,
+        1
+      ],
+      "hunt": 1,
+      "boss": 1
+    },
+    "moderate": {
+      "active_probability": 0.6428571429,
+      "social_xp": [
+        300,
+        500
+      ],
+      "explore": [
+        1,
+        2
+      ],
+      "hunt": 2,
+      "boss": 1
+    },
+    "at_cap": {
+      "active_probability": 1.0,
+      "social_xp": [
+        900,
+        900
+      ],
+      "explore": [
+        3,
+        3
+      ],
+      "hunt": 5,
+      "boss": 2
+    },
+    "social_only": {
+      "active_probability": 0.6428571429,
+      "social_xp": [
+        300,
+        500
+      ],
+      "explore": [
+        0,
+        0
+      ],
+      "hunt": 0,
+      "boss": 0
+    }
+  }
+}

@@ -164,3 +164,26 @@ app.mount("/", StaticFiles(directory="web/static", html=True), name="static")
 
 def run_web():
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+@app.get('/health/live')
+async def live_health():
+    return {'status': 'alive'}
+
+
+@app.get('/health/ready')
+async def ready_health(request: Request):
+    from infra.db import postgres
+    from sqlalchemy import text
+    import asyncio
+    bot = getattr(request.app.state, 'bot', None)
+    if not bot or not bot.is_ready():
+        raise HTTPException(status_code=503, detail='Discord not ready')
+    try:
+        async def ping():
+            async with postgres.engine.connect() as conn:
+                await conn.execute(text('SELECT 1'))
+        await asyncio.wait_for(ping(), timeout=2)
+    except Exception:
+        raise HTTPException(status_code=503, detail='Database not ready')
+    return {'status': 'ready'}

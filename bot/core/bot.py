@@ -37,6 +37,7 @@ class VirtusBot(commands.Bot):
         await self.load_extension('bot.cogs.score')
         await self.load_extension('bot.cogs.noi_tu')
         await self.load_extension('bot.cogs.football')
+        await self.load_extension('bot.cogs.cultivation')
         
         # Sync Application Commands
         await self.tree.sync()

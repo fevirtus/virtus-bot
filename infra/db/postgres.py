@@ -90,6 +90,7 @@ class PostgresConnection:
 
     async def create_tables(self):
         """Tạo tất cả tables từ Base metadata"""
+        import models  # register all mapped tables before create_all
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
@@ -108,13 +109,15 @@ class PostgresConnection:
             """
             DO $$
             BEGIN
-                IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bot_configs_pkey') THEN
-                    ALTER TABLE bot_configs DROP CONSTRAINT bot_configs_pkey;
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'bot_configs'::regclass AND contype = 'p' AND pg_get_constraintdef(oid) = 'PRIMARY KEY (guild_id, key)') THEN
+                    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'bot_configs'::regclass AND conname = 'bot_configs_pkey') THEN
+                        ALTER TABLE bot_configs DROP CONSTRAINT bot_configs_pkey;
+                    END IF;
+                    ALTER TABLE bot_configs ADD PRIMARY KEY (guild_id, key);
                 END IF;
             END $$;
             """,
             # Re-adding PK might fail if there are duplicates, but usually safe if coming from single-tenant
-            "ALTER TABLE bot_configs ADD PRIMARY KEY (guild_id, key);",
 
             # 3. Add Unique Constraints
             """
@@ -137,12 +140,7 @@ class PostgresConnection:
         
         async with self.engine.begin() as conn:
             for q in queries:
-                try:
-                    await conn.execute(text(q))
-                except Exception as e:
-                    # Ignore "multiple primary keys" errors if we ran this partially or if constraints conflict in weird ways
-                    # But print simple warning
-                    pass
+                await conn.execute(text(q))
         print("✅ Schema verification/migration completed.")
 
     def get_engine(self) -> AsyncEngine:

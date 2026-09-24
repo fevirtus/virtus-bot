@@ -20,11 +20,9 @@ async def main():
     print("⏳ Waiting for Database connection...")
     await postgres.wait_for_connection()
 
-    # Ensure schema is migrated (Add missing columns for Multi-Server)
-    await postgres.verify_and_migrate_schema()
-
-    # Ensure tables are created
+    # Fresh databases need tables before legacy additive migration.
     await postgres.create_tables()
+    await postgres.verify_and_migrate_schema()
 
     # Configure Web Server
     app.state.bot = bot

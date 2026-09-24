@@ -1,0 +1,16 @@
+profile,target,mean_income,mean_spending,mean_coins,mean_shop_spending,mean_heal_potions_used
+light,Truc Co,875.55,493.51,532.032,94.684,7.73
+light,Kim Dan,5136.12,1502.73,3783.388,116.924,26.188
+light,Nguyen Anh,20104.75,3459.92,16794.834,133.14,70.546
+moderate,Truc Co,868.99,491.61,527.38,89.238,6.086
+moderate,Kim Dan,4211.25,1410.81,2950.442,112.376,17.376
+moderate,Nguyen Anh,16095.55,3171.64,13073.908,130.064,45.63
+moderate,Hoa Than,47378.52,6166.52,41362.004,146.376,102.282
+moderate_team,Truc Co,839.54,449.45,540.09,78.822,0.002
+moderate_team,Kim Dan,4209.66,1284.61,3075.042,102.504,0.002
+moderate_team,Nguyen Anh,16051.17,2576.53,13624.642,120.08,0.002
+moderate_team,Hoa Than,47399.99,4439.56,43110.43,136.392,0.002
+at_cap,Truc Co,969.26,462.9,656.36,71.656,5.664
+at_cap,Kim Dan,4498.44,1383.43,3265.008,91.95,16.186
+at_cap,Nguyen Anh,16492.42,3077.75,13564.674,105.128,42.476
+at_cap,Hoa Than,46258.85,5910.07,40498.778,118.292,92.842

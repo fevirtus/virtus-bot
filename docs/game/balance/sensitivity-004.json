@@ -1,0 +1,391 @@
+{
+  "baseline": {
+    "version": "candidate-004",
+    "seed": 23092026,
+    "samples": 500,
+    "horizon_days": 90,
+    "profiles": {
+      "moderate": {
+        "milestones": {
+          "Truc Co": {
+            "completed_percent": 100.0,
+            "days_cumulative": {
+              "n": 500,
+              "mean": 9.86,
+              "p10": 5.42,
+              "p50": 8.4,
+              "p90": 16.39
+            },
+            "days_in_realm": {
+              "n": 500,
+              "mean": 9.86,
+              "p10": 5.42,
+              "p50": 8.4,
+              "p90": 16.39
+            },
+            "by_day_10_percent": 60.8,
+            "mean_cumulative_metrics_at_completion": {
+              "xp_wasted_at_cap": 1015.181,
+              "xp_earned": 2419.11,
+              "social_xp": 2461.121,
+              "spent_shop": 89.238,
+              "bought_herb": 15.742,
+              "bought_water": 5.254,
+              "spent_craft": 260.61,
+              "consumed_herb": 54.01,
+              "consumed_water": 23.224,
+              "crafted_minor": 15.0,
+              "hunt_attempts": 21.024,
+              "hunt_wins": 21.024,
+              "hunt_seconds": 737.198,
+              "potions_used": 6.086,
+              "damage": 9073.008,
+              "support": 0.0,
+              "income_hunt": 252.288,
+              "rewards_hunt": 21.024,
+              "reward_slots": 21.024,
+              "boss_attempts": 7.008,
+              "boss_wins": 6.74,
+              "boss_seconds": 582.568,
+              "income_boss": 370.7,
+              "gathered_core": 6.74,
+              "rewards_boss": 6.74,
+              "minor_breakthroughs": 8.0,
+              "bought_blood": 0.0,
+              "consumed_blood": 7.562,
+              "gathered_herb": 51.876,
+              "gathered_water": 25.954,
+              "income_explore": 246.0,
+              "rewards_explore": 9.84,
+              "crafted_heal": 7.562,
+              "social_material_grants": 6.274,
+              "bought_core": 0.0,
+              "consumed_core": 4.112,
+              "crafted_major": 1.772,
+              "spent_ritual": 141.76,
+              "break_attempts": 1.772,
+              "inventory_herb_at_milestone": 14.744,
+              "inventory_water_at_milestone": 8.552,
+              "inventory_core_at_milestone": 2.912,
+              "coins": 527.38,
+              "craft_failures": 0.284,
+              "refunded_herb": 1.136,
+              "refunded_water": 0.568,
+              "refunded_core": 0.284,
+              "break_failures": 0.772,
+              "injured_xp_lost": 10.79
+            }
+          }
+        },
+        "combat": {
+          "hunt": {
+            "attempts": 10512,
+            "win_percent": 100.0,
+            "mean_seconds": 35.06
+          },
+          "boss": {
+            "attempts": 3504,
+            "win_percent": 96.18,
+            "mean_seconds": 83.13
+          }
+        },
+        "mean_final_coins": 527.38,
+        "blocked_checks": {
+          "shop_limit_or_disabled": 391,
+          "ritual_requirements": 16911,
+          "special_materials": 1861
+        }
+      }
+    }
+  },
+  "no_shop": {
+    "version": "candidate-004",
+    "seed": 23092026,
+    "samples": 500,
+    "horizon_days": 90,
+    "profiles": {
+      "moderate": {
+        "milestones": {
+          "Truc Co": {
+            "completed_percent": 100.0,
+            "days_cumulative": {
+              "n": 500,
+              "mean": 11.17,
+              "p10": 6.43,
+              "p50": 10.41,
+              "p90": 17.38
+            },
+            "days_in_realm": {
+              "n": 500,
+              "mean": 11.17,
+              "p10": 6.43,
+              "p50": 10.41,
+              "p90": 17.38
+            },
+            "by_day_10_percent": 45.2,
+            "mean_cumulative_metrics_at_completion": {
+              "xp_wasted_at_cap": 1492.959,
+              "xp_earned": 2419.11,
+              "social_xp": 2801.674,
+              "hunt_attempts": 23.808,
+              "hunt_wins": 23.808,
+              "hunt_seconds": 832.846,
+              "potions_used": 6.582,
+              "damage": 10181.787,
+              "support": 0.0,
+              "income_hunt": 285.696,
+              "rewards_hunt": 23.808,
+              "reward_slots": 23.808,
+              "boss_attempts": 7.936,
+              "boss_wins": 7.562,
+              "boss_seconds": 658.322,
+              "income_boss": 415.91,
+              "gathered_core": 7.562,
+              "rewards_boss": 7.562,
+              "gathered_herb": 59.876,
+              "gathered_water": 29.954,
+              "income_explore": 285.65,
+              "rewards_explore": 11.426,
+              "spent_craft": 264.24,
+              "consumed_herb": 54.736,
+              "consumed_water": 23.224,
+              "crafted_minor": 15.0,
+              "minor_breakthroughs": 8.0,
+              "consumed_blood": 8.288,
+              "crafted_heal": 8.288,
+              "social_material_grants": 7.102,
+              "consumed_core": 4.112,
+              "crafted_major": 1.772,
+              "spent_ritual": 141.76,
+              "break_attempts": 1.772,
+              "inventory_herb_at_milestone": 6.276,
+              "inventory_water_at_milestone": 7.298,
+              "inventory_core_at_milestone": 3.734,
+              "coins": 731.256,
+              "craft_failures": 0.284,
+              "refunded_herb": 1.136,
+              "refunded_water": 0.568,
+              "refunded_core": 0.284,
+              "break_failures": 0.772,
+              "injured_xp_lost": 4.585
+            }
+          }
+        },
+        "combat": {
+          "hunt": {
+            "attempts": 11904,
+            "win_percent": 100.0,
+            "mean_seconds": 34.98
+          },
+          "boss": {
+            "attempts": 3968,
+            "win_percent": 95.29,
+            "mean_seconds": 82.95
+          }
+        },
+        "mean_final_coins": 731.26,
+        "blocked_checks": {
+          "shop_limit_or_disabled": 83226,
+          "special_materials": 1325,
+          "ritual_requirements": 17606
+        }
+      }
+    }
+  },
+  "no_potions": {
+    "version": "candidate-004",
+    "seed": 23092026,
+    "samples": 500,
+    "horizon_days": 90,
+    "profiles": {
+      "moderate": {
+        "milestones": {
+          "Truc Co": {
+            "completed_percent": 100.0,
+            "days_cumulative": {
+              "n": 500,
+              "mean": 12.52,
+              "p10": 6.36,
+              "p50": 10.4,
+              "p90": 22.42
+            },
+            "days_in_realm": {
+              "n": 500,
+              "mean": 12.52,
+              "p10": 6.36,
+              "p50": 10.4,
+              "p90": 22.42
+            },
+            "by_day_10_percent": 45.8,
+            "mean_cumulative_metrics_at_completion": {
+              "xp_wasted_at_cap": 1760.787,
+              "xp_earned": 2419.11,
+              "social_xp": 3096.067,
+              "spent_shop": 62.914,
+              "bought_herb": 9.796,
+              "bought_water": 4.746,
+              "spent_craft": 222.8,
+              "consumed_herb": 46.448,
+              "consumed_water": 23.224,
+              "crafted_minor": 15.0,
+              "hunt_attempts": 26.364,
+              "hunt_wins": 26.364,
+              "hunt_seconds": 923.678,
+              "potions_used": 0.0,
+              "damage": 11503.378,
+              "support": 0.0,
+              "income_hunt": 316.368,
+              "rewards_hunt": 26.364,
+              "reward_slots": 26.364,
+              "boss_attempts": 8.788,
+              "boss_wins": 6.468,
+              "boss_seconds": 726.894,
+              "income_boss": 355.74,
+              "gathered_core": 6.468,
+              "rewards_boss": 6.468,
+              "minor_breakthroughs": 8.0,
+              "gathered_herb": 64.482,
+              "gathered_water": 32.26,
+              "income_explore": 305.55,
+              "rewards_explore": 12.222,
+              "social_material_grants": 7.816,
+              "bought_core": 0.0,
+              "consumed_core": 4.112,
+              "crafted_major": 1.772,
+              "spent_ritual": 141.76,
+              "break_attempts": 1.772,
+              "inventory_herb_at_milestone": 28.966,
+              "inventory_water_at_milestone": 14.35,
+              "inventory_core_at_milestone": 2.64,
+              "coins": 700.184,
+              "craft_failures": 0.284,
+              "refunded_herb": 1.136,
+              "refunded_water": 0.568,
+              "refunded_core": 0.284,
+              "break_failures": 0.772,
+              "injured_xp_lost": 8.83
+            }
+          }
+        },
+        "combat": {
+          "hunt": {
+            "attempts": 13182,
+            "win_percent": 100.0,
+            "mean_seconds": 35.04
+          },
+          "boss": {
+            "attempts": 4394,
+            "win_percent": 73.6,
+            "mean_seconds": 82.71
+          }
+        },
+        "mean_final_coins": 700.18,
+        "blocked_checks": {
+          "special_materials": 7713,
+          "ritual_requirements": 35914,
+          "shop_limit_or_disabled": 120
+        }
+      }
+    }
+  },
+  "expensive_shop": {
+    "version": "candidate-004",
+    "seed": 23092026,
+    "samples": 500,
+    "horizon_days": 90,
+    "profiles": {
+      "moderate": {
+        "milestones": {
+          "Truc Co": {
+            "completed_percent": 100.0,
+            "days_cumulative": {
+              "n": 500,
+              "mean": 9.86,
+              "p10": 5.42,
+              "p50": 8.4,
+              "p90": 16.39
+            },
+            "days_in_realm": {
+              "n": 500,
+              "mean": 9.86,
+              "p10": 5.42,
+              "p50": 8.4,
+              "p90": 16.39
+            },
+            "by_day_10_percent": 60.6,
+            "mean_cumulative_metrics_at_completion": {
+              "xp_wasted_at_cap": 1016.147,
+              "xp_earned": 2419.11,
+              "social_xp": 2461.802,
+              "spent_shop": 178.244,
+              "bought_herb": 15.718,
+              "bought_water": 5.25,
+              "spent_craft": 260.57,
+              "consumed_herb": 54.002,
+              "consumed_water": 23.224,
+              "crafted_minor": 15.0,
+              "hunt_attempts": 21.03,
+              "hunt_wins": 21.03,
+              "hunt_seconds": 737.408,
+              "potions_used": 6.08,
+              "damage": 9076.038,
+              "support": 0.0,
+              "income_hunt": 252.36,
+              "rewards_hunt": 21.03,
+              "reward_slots": 21.03,
+              "boss_attempts": 7.01,
+              "boss_wins": 6.74,
+              "boss_seconds": 582.722,
+              "income_boss": 370.7,
+              "gathered_core": 6.74,
+              "rewards_boss": 6.74,
+              "minor_breakthroughs": 8.0,
+              "bought_blood": 0.0,
+              "consumed_blood": 7.554,
+              "gathered_herb": 51.892,
+              "gathered_water": 25.964,
+              "income_explore": 246.1,
+              "rewards_explore": 9.844,
+              "crafted_heal": 7.554,
+              "social_material_grants": 6.276,
+              "bought_core": 0.0,
+              "consumed_core": 4.112,
+              "crafted_major": 1.772,
+              "spent_ritual": 141.76,
+              "break_attempts": 1.772,
+              "inventory_herb_at_milestone": 14.744,
+              "inventory_water_at_milestone": 8.558,
+              "inventory_core_at_milestone": 2.912,
+              "coins": 438.586,
+              "craft_failures": 0.284,
+              "refunded_herb": 1.136,
+              "refunded_water": 0.568,
+              "refunded_core": 0.284,
+              "break_failures": 0.772,
+              "injured_xp_lost": 10.675
+            }
+          }
+        },
+        "combat": {
+          "hunt": {
+            "attempts": 10515,
+            "win_percent": 100.0,
+            "mean_seconds": 35.06
+          },
+          "boss": {
+            "attempts": 3505,
+            "win_percent": 96.15,
+            "mean_seconds": 83.13
+          }
+        },
+        "mean_final_coins": 438.59,
+        "blocked_checks": {
+          "shop_limit_or_disabled": 382,
+          "ritual_requirements": 16940,
+          "special_materials": 1858,
+          "coins": 5
+        }
+      }
+    }
+  }
+}

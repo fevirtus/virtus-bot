@@ -1,0 +1,67 @@
+{
+  "config": "candidate-002",
+  "seed": 23092026,
+  "horizon_days": 120,
+  "note": "Quantiles conditional on completion; days since first login. See model limitations.",
+  "results": {
+    "light": {
+      "completed": 2000,
+      "samples": 2000,
+      "completion_percent": 100.0,
+      "days_p10": 28.64,
+      "days_p50": 37.65,
+      "days_p90": 48.78,
+      "by_day_21_percent": 0.35,
+      "mean_craft_failures": 0.414,
+      "mean_breakthrough_failures": 0.696,
+      "blocked_visits": {
+        "final_tier_xp": 6263,
+        "ritual_resources": 393
+      }
+    },
+    "moderate": {
+      "completed": 2000,
+      "samples": 2000,
+      "completion_percent": 100.0,
+      "days_p10": 15.49,
+      "days_p50": 19.68,
+      "days_p90": 25.55,
+      "by_day_21_percent": 64.45,
+      "mean_craft_failures": 0.423,
+      "mean_breakthrough_failures": 0.706,
+      "blocked_visits": {
+        "final_tier_xp": 3892,
+        "ritual_resources": 695
+      }
+    },
+    "at_cap": {
+      "completed": 2000,
+      "samples": 2000,
+      "completion_percent": 100.0,
+      "days_p10": 9.43,
+      "days_p50": 10.36,
+      "days_p90": 12.37,
+      "by_day_21_percent": 100.0,
+      "mean_craft_failures": 0.434,
+      "mean_breakthrough_failures": 0.743,
+      "blocked_visits": {
+        "final_tier_xp": 2000,
+        "ritual_resources": 440
+      }
+    },
+    "social_only": {
+      "completed": 0,
+      "samples": 2000,
+      "completion_percent": 0.0,
+      "days_p10": null,
+      "days_p50": null,
+      "days_p90": null,
+      "by_day_21_percent": 0.0,
+      "mean_craft_failures": 0.0,
+      "mean_breakthrough_failures": 0.0,
+      "blocked_visits": {
+        "minor_materials_or_coins": 155183
+      }
+    }
+  }
+}

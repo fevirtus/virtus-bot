@@ -1,0 +1,280 @@
+{
+  "version": "candidate-004",
+  "status": "PROPOSED_SIMULATION_ONLY",
+  "seed": 23092026,
+  "samples": 500,
+  "horizon_days": 240,
+  "initial_coins": 150,
+  "minor_pills": [
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    3,
+    3
+  ],
+  "whole_relic_drop": 0.15,
+  "shop_enabled": true,
+  "potions_enabled": true,
+  "shop_daily_units": 10,
+  "shop_prices": {
+    "herb": 4,
+    "water": 5
+  },
+  "recipes": {
+    "minor": {
+      "herb": 2,
+      "water": 1,
+      "coins": 8
+    },
+    "major": {
+      "herb": 8,
+      "water": 4,
+      "core": 2,
+      "coins": 50
+    },
+    "heal": {
+      "herb": 1,
+      "blood": 1,
+      "coins": 5
+    }
+  },
+  "craft_minutes": {
+    "minor": 1,
+    "major": 10,
+    "heal": 1
+  },
+  "combat": {
+    "hunt_hp": 155,
+    "hunt_attack": 20,
+    "boss_hp": 390,
+    "boss_attack": 22,
+    "hunt_ticks": 15,
+    "boss_ticks": 30,
+    "seconds_per_tick": 7,
+    "dungeon_transition_seconds": 75,
+    "careful_damage_taken": 0.8,
+    "attack_damage_taken": 1.15
+  },
+  "realms": [
+    {
+      "target": "Truc Co",
+      "power": 1,
+      "xp": [
+        72,
+        99,
+        135,
+        180,
+        216,
+        270,
+        324,
+        396,
+        675
+      ],
+      "cost_scale": 1,
+      "ritual_coins": 80,
+      "craft_success": 0.85,
+      "break_base": 0.5,
+      "insight": 0.15,
+      "injury_hours": 6,
+      "rewards": {
+        "explore": {
+          "coins": 25,
+          "xp": 20
+        },
+        "hunt": {
+          "coins": 12,
+          "xp": 15
+        },
+        "boss": {
+          "coins": 55,
+          "xp": 70
+        }
+      }
+    },
+    {
+      "target": "Kim Dan",
+      "power": 2,
+      "xp": [
+        200,
+        275,
+        375,
+        500,
+        600,
+        750,
+        900,
+        1100,
+        1875
+      ],
+      "cost_scale": 2,
+      "ritual_coins": 160,
+      "craft_success": 0.7999999999999999,
+      "break_base": 0.45,
+      "insight": 0.125,
+      "injury_hours": 12,
+      "rewards": {
+        "explore": {
+          "coins": 50,
+          "xp": 20
+        },
+        "hunt": {
+          "coins": 24,
+          "xp": 15
+        },
+        "boss": {
+          "coins": 110,
+          "xp": 70
+        }
+      }
+    },
+    {
+      "target": "Nguyen Anh",
+      "power": 4,
+      "xp": [
+        480,
+        660,
+        900,
+        1200,
+        1440,
+        1800,
+        2160,
+        2640,
+        4500
+      ],
+      "cost_scale": 3,
+      "ritual_coins": 240,
+      "craft_success": 0.75,
+      "break_base": 0.4,
+      "insight": 0.1,
+      "injury_hours": 24,
+      "rewards": {
+        "explore": {
+          "coins": 75,
+          "xp": 20
+        },
+        "hunt": {
+          "coins": 36,
+          "xp": 15
+        },
+        "boss": {
+          "coins": 165,
+          "xp": 70
+        }
+      }
+    },
+    {
+      "target": "Hoa Than",
+      "power": 8,
+      "xp": [
+        960,
+        1320,
+        1800,
+        2400,
+        2880,
+        3600,
+        4320,
+        5280,
+        9000
+      ],
+      "cost_scale": 4,
+      "ritual_coins": 320,
+      "craft_success": 0.7,
+      "break_base": 0.35,
+      "insight": 0.1,
+      "injury_hours": 24,
+      "rewards": {
+        "explore": {
+          "coins": 100,
+          "xp": 20
+        },
+        "hunt": {
+          "coins": 48,
+          "xp": 15
+        },
+        "boss": {
+          "coins": 220,
+          "xp": 70
+        }
+      }
+    }
+  ],
+  "profiles": {
+    "light": {
+      "active_probability": 0.42857142857142855,
+      "raw_social_xp": [
+        150,
+        300
+      ],
+      "explore": [
+        1,
+        1
+      ],
+      "hunt": 1,
+      "dungeon": 1,
+      "party": 1,
+      "strategy": "balanced"
+    },
+    "moderate": {
+      "active_probability": 0.6428571428571429,
+      "raw_social_xp": [
+        300,
+        500
+      ],
+      "explore": [
+        1,
+        2
+      ],
+      "hunt": 2,
+      "dungeon": 1,
+      "party": 1,
+      "strategy": "balanced"
+    },
+    "moderate_team": {
+      "active_probability": 0.6428571428571429,
+      "raw_social_xp": [
+        300,
+        500
+      ],
+      "explore": [
+        1,
+        2
+      ],
+      "hunt": 2,
+      "dungeon": 1,
+      "party": 3,
+      "strategy": "balanced"
+    },
+    "at_cap": {
+      "active_probability": 1,
+      "raw_social_xp": [
+        1800,
+        1800
+      ],
+      "explore": [
+        3,
+        3
+      ],
+      "hunt": 5,
+      "dungeon": 2,
+      "party": 1,
+      "strategy": "balanced"
+    },
+    "social_only": {
+      "active_probability": 0.6428571428571429,
+      "raw_social_xp": [
+        300,
+        500
+      ],
+      "explore": [
+        0,
+        0
+      ],
+      "hunt": 0,
+      "dungeon": 0,
+      "party": 1,
+      "strategy": "balanced"
+    }
+  }
+}

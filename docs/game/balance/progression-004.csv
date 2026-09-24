@@ -1,0 +1,21 @@
+profile,target,samples,completion_percent,mean_days_from_start,median_days,p10_days,p90_days,mean_days_since_previous
+light,Truc Co,500,100.0,18.7,17.44,11.47,26.42,18.7
+light,Kim Dan,500,100.0,66.13,65.35,54.35,79.4,47.43
+light,Nguyen Anh,500,100.0,177.25,177.36,158.35,197.42,111.11
+light,Hoa Than,500,0.0,,,,,
+moderate,Truc Co,500,100.0,9.86,8.4,5.42,16.39,9.86
+moderate,Kim Dan,500,100.0,30.04,29.34,23.39,38.4,20.19
+moderate,Nguyen Anh,500,100.0,77.52,76.49,67.54,88.41,47.47
+moderate,Hoa Than,500,100.0,171.94,171.42,157.35,187.46,94.42
+moderate_team,Truc Co,500,100.0,9.49,8.37,5.38,15.39,9.49
+moderate_team,Kim Dan,500,100.0,30.19,29.38,23.37,38.4,20.7
+moderate_team,Nguyen Anh,500,100.0,77.31,76.44,68.37,88.45,47.11
+moderate_team,Hoa Than,500,100.0,172.49,171.49,157.42,187.5,95.18
+at_cap,Truc Co,500,100.0,3.45,3.33,2.39,5.39,3.45
+at_cap,Kim Dan,500,100.0,10.15,9.42,8.51,12.39,6.7
+at_cap,Nguyen Anh,500,100.0,24.89,24.41,22.43,27.41,14.74
+at_cap,Hoa Than,500,100.0,52.56,52.39,49.52,55.53,27.68
+social_only,Truc Co,500,0.0,,,,,
+social_only,Kim Dan,500,0.0,,,,,
+social_only,Nguyen Anh,500,0.0,,,,,
+social_only,Hoa Than,500,0.0,,,,,

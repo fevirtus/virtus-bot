@@ -2,6 +2,12 @@
 
 Một Discord bot mã nguồn mở tích hợp Admin Dashboard để quản lý cấu hình và điểm kinh nghiệm người dùng.
 
+## Thiết kế game tu tiên đang xây dựng
+
+Nguồn tài liệu cơ chế game: [docs/game/README.md](docs/game/README.md).
+Tài liệu phân biệt luật đã chốt, thông số thử nghiệm và đề xuất chờ duyệt;
+không có nghĩa các cơ chế này đã được triển khai trong bot hiện tại.
+
 ## Tính năng
 
 -   **Admin Dashboard (Web UI)**: Quản lý cấu hình bot trực quan.
@@ -86,7 +92,7 @@ Dự án hỗ trợ triển khai nhanh bằng Docker Compose với image đã đ
 ### Cài đặt và chạy
 1.  Tạo file `.env` (nếu chưa có):
     ```bash
-    cp CONFIG_EXAMPLE.md .env
+    cp .env.example .env
     # Hoặc tạo mới và điền các giá trị cần thiết
     ```
     > **Lưu ý Database**:
@@ -113,3 +119,6 @@ File `docker-compose.yml` bao gồm:
 -   `db`: PostgreSQL 15 (chạy song song phục vụ cho bot).
     -   Dữ liệu được lưu tại volume `postgres_data`.
 
+## Tu tiên — bản 1.0
+
+Bot đã có vòng chơi cốt lõi và tự tạo kênh/role khi kết nối server. Xem [trạng thái triển khai, yêu cầu Discord và kiểm thử](docs/game/IMPLEMENTATION.md). Thông số cân bằng và trạng thái rollout được ghi trong [tài liệu phát hành](docs/game/RELEASE.md).
