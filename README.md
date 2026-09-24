@@ -115,7 +115,7 @@ Dự án hỗ trợ triển khai nhanh bằng Docker Compose với image đã đ
 
 ### Cấu hình Docker Compose
 File `docker-compose.yml` bao gồm:
--   `bot`: Sử dụng image `fevirtus/virtus-bot:latest`.
+-   `bot`: Sử dụng image `ghcr.io/fevirtus/virtus-bot:latest` (ghi đè bằng `VIRTUS_IMAGE` nếu cần).
 -   `db`: PostgreSQL 15 (chạy song song phục vụ cho bot).
     -   Dữ liệu được lưu tại volume `postgres_data`.
 
