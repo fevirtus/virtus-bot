@@ -9,7 +9,6 @@ __all__ = [
     'DiscordNoiTu',
     'FootballSubscription'
 ]
-from models.cultivation import CultivationGuild, CultivationReceipt
 
 from models.config import BotConfig
 from models.guild import Guild

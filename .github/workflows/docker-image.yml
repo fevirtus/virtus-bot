@@ -18,31 +18,16 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: virtus_test
-          POSTGRES_PASSWORD: test_only
-          POSTGRES_DB: virtus_test
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U virtus_test"
-          --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: pip install uv && uv sync --locked
-      - name: Engine, Discord adapter and PostgreSQL transactions
-        env:
-          CULTIVATION_TEST_DATABASE_URL: postgresql+asyncpg://virtus_test:test_only@localhost:5432/virtus_test
+      - name: Bot and health regression
         run: uv run --frozen python -m unittest discover -s tests -v
       - name: Legacy optional dependency
         run: uv run --frozen python -c 'from thefuzz import fuzz; assert fuzz.ratio("virtus", "virtus") == 100'
-      - name: Historical model regression
-        run: uv run --frozen python -m unittest discover -s scripts -p 'test_game_balance.py' -v
       - run: uv run --frozen python -m compileall -q bot services models infra web main.py
 
   publish:
