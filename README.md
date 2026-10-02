@@ -83,19 +83,17 @@ Module riêng với `HomeDebt` (tiền nhà); mỗi kênh hoặc thread có mộ
 1. Trong Admin Dashboard, chọn server và bật **Group Debt**.
    `CHANNEL_GROUP_DEBT_IDS` là danh sách ID kênh được phép, cách nhau bằng dấu phẩy.
    Để trống để cho phép mọi kênh. Thread dùng ID của chính thread đó.
-2. Dùng `/nhom`, chọn các thành viên thường chơi, bấm **Lưu nhóm**. Thiết lập một lần,
-   tối đa 25 người. Chỉ người tạo nhóm, người có quyền Manage Server hoặc người trong
-   `ADMIN_IDS` của server được đổi danh sách. Nợ cũ vẫn được giữ khi đổi thành viên.
-3. Sau buổi chơi, người ứng tiền dùng `/chia tien:600k`. Bot mặc định chọn toàn bộ nhóm;
-   bỏ chọn người không chơi rồi bấm **Xác nhận chia tiền**. Có thể thêm `ghichu`.
-   Người ứng cũng chịu phần của mình nếu được chọn. Form có hiệu lực 5 phút;
-   hết hạn thì dùng lại lệnh. Nếu nhóm vừa thay đổi, bot yêu cầu chọn lại trước khi ghi.
-4. Dùng `/no` để xem số dư và gợi ý ai chuyển cho ai. Đây là nợ **ròng trong nhóm**,
+2. Sau buổi chơi, người ứng tiền dùng `/chia tien:600k`, chọn **tất cả người tham gia
+   buổi này** ở danh sách, rồi bấm **Xác nhận chia tiền**. Bot tự đếm người và chia đều;
+   chọn cả bạn nếu bạn cũng tham gia. Có thể thêm `ghichu`. Mỗi lần chọn lại danh sách,
+   tối đa 25 người, không cần thiết lập nhóm hoặc nhập số người. Nợ cũ vẫn được giữ.
+   Form có hiệu lực 5 phút; hết hạn thì dùng lại lệnh. Chưa xác nhận thì chưa ghi nợ.
+3. Dùng `/no` để xem số dư và gợi ý ai chuyển cho ai. Đây là nợ **ròng trong nhóm**,
    tự bù trừ giữa các lần ứng tiền, không phải nợ cố định giữa từng cặp người.
-5. Sau khi chuyển thật, người trả dùng `/tra nguoi:@An tien:200k` để giảm nợ ngay,
+4. Sau khi chuyển thật, người trả dùng `/tra nguoi:@An tien:200k` để giảm nợ ngay,
    không cần người nhận duyệt. Được trả từng phần; bot từ chối trả vượt số nợ ròng
    của người trả hoặc số được nhận của người nhận. Lệnh chỉ ghi sổ, không chuyển tiền.
-6. Nhập nhầm thì bấm **Hoàn tác** trên tin nhắn kết quả, hoặc dùng `/lichsu` lấy mã rồi
+5. Nhập nhầm thì bấm **Hoàn tác** trên tin nhắn kết quả, hoặc dùng `/lichsu` lấy mã rồi
    `/hoantac ma:<mã>`. Bạn chỉ hoàn tác được khoản mình tạo; quản trị viên có thể hỗ trợ.
    Lịch sử giữ khoản đã hoàn tác. Hoàn tác đảo tác động của khoản đó trên số dư hiện tại,
    kể cả khi đã có giao dịch mới. Nút hoàn tác dùng được sau khi bot restart.

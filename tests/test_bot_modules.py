@@ -12,7 +12,8 @@ class LegacyModules(unittest.IsolatedAsyncioTestCase):
                 await bot.load_extension('bot.cogs.'+name)
             self.assertEqual(len(bot.extensions), 5)
             self.assertTrue(bot.tree.get_commands())
-            self.assertTrue({'nhom', 'chia', 'no', 'tra', 'lichsu', 'hoantac'}.issubset(
+            self.assertNotIn('nhom', {command.name for command in bot.tree.get_commands()})
+            self.assertTrue({'chia', 'no', 'tra', 'lichsu', 'hoantac'}.issubset(
                 {c.name for c in bot.tree.get_commands()}))
             self.assertTrue(any(view.is_persistent() for view in bot.persistent_views))
             self.assertFalse(any(c.name.startswith('tutien') for c in bot.tree.get_commands()))

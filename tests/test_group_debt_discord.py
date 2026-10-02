@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 
 import discord
-from bot.cogs.group_debt import GroupDebtCog, GroupPicker, SplitPicker, UndoView
+from bot.cogs.group_debt import GroupDebtCog, SplitPicker, UndoView
 
 
 def interaction(user_id=1):
@@ -17,29 +17,35 @@ def interaction(user_id=1):
     )
 
 
+def member(user_id, bot=False, guild_id=10):
+    user = MagicMock(spec=discord.Member)
+    user.id = user_id
+    user.bot = bot
+    user.guild = SimpleNamespace(id=guild_id)
+    return user
+
+
 class DiscordDebtFlow(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.cog = GroupDebtCog(SimpleNamespace(add_view=MagicMock(), persistent_views=[]))
         self.cog.repo = AsyncMock()
         self.cog.feature_repo = SimpleNamespace(get=AsyncMock(return_value=True))
         self.cog.config_repo = SimpleNamespace(get=AsyncMock(return_value=''))
-        self.group = SimpleNamespace(member_ids=[1, 2, 3], revision=1, owner_id=1)
 
-    async def test_split_defaults_to_everyone_and_no_write_until_confirm(self):
+    async def test_select_participants_each_bill_and_no_write_until_confirm(self):
         request = interaction()
-        self.cog.repo.get_group.return_value = self.group
         await self.cog.split.callback(self.cog, request, '600k')
         view = request.followup.send.call_args.kwargs['view']
-        self.assertEqual(view.selected, [1, 2, 3])
-        self.assertTrue(all(option.default for option in view.picker.options))
-        self.assertIn('200.000 ₫', view.embed().description)
+        self.assertEqual(view.selected, [])
+        self.assertIsInstance(view.picker, discord.ui.UserSelect)
+        self.assertTrue(view.confirm.disabled)
         self.cog.repo.record.assert_not_awaited()
-        # A user removes the player who did not come today.
-        view.picker._values = ['1', '2']
+        view.picker._values = [member(1), member(2)]
         selection = interaction()
         await view.choose(selection)
         self.assertEqual(view.selected, [1, 2])
         self.assertIn('300.000 ₫', view.embed().description)
+        self.assertFalse(view.confirm.disabled)
         self.cog.repo.record.assert_not_awaited()
         row = SimpleNamespace(id=request.id, actor_id=1, kind='expense', amount=600000,
                               shares={'1': 300000, '2': 300000}, note='')
@@ -49,7 +55,7 @@ class DiscordDebtFlow(unittest.IsolatedAsyncioTestCase):
         await view.confirm.callback(confirm)
         confirm.response.defer.assert_awaited_once_with()
         self.cog.repo.record.assert_awaited_once_with(request.id, 10, 20, 1, 'expense', 600000,
-                                                     participants=[1, 2], revision=1, note='')
+                                                     participants=[1, 2], note='')
         receipt = confirm.followup.send.call_args.kwargs
         self.assertFalse(receipt['ephemeral'])
         self.assertIsInstance(receipt['view'], UndoView)
@@ -57,13 +63,13 @@ class DiscordDebtFlow(unittest.IsolatedAsyncioTestCase):
         view.stop()
 
     async def test_cancel_does_not_record_debt(self):
-        view = SplitPicker(self.cog, interaction(), self.group, 600000, '')
+        view = SplitPicker(self.cog, interaction(), 600000, '')
         await view.cancel.callback(interaction())
         self.cog.repo.record.assert_not_awaited()
         self.assertTrue(view.is_finished())
 
     async def test_someone_else_cannot_operate_your_preview(self):
-        view = SplitPicker(self.cog, interaction(), self.group, 600000, '')
+        view = SplitPicker(self.cog, interaction(), 600000, '')
         other = interaction(2)
         self.assertFalse(await view.interaction_check(other))
         other.response.send_message.assert_awaited_once()
@@ -71,7 +77,7 @@ class DiscordDebtFlow(unittest.IsolatedAsyncioTestCase):
         view.stop()
 
     async def test_disabled_feature_and_channel_restrictions_apply_to_buttons(self):
-        view = SplitPicker(self.cog, interaction(), self.group, 600000, '')
+        view = SplitPicker(self.cog, interaction(), 600000, '')
         self.cog.feature_repo.get.return_value = False
         self.assertFalse(await view.interaction_check(interaction()))
         self.cog.feature_repo.get.return_value = True
@@ -82,7 +88,8 @@ class DiscordDebtFlow(unittest.IsolatedAsyncioTestCase):
         view.stop()
 
     async def test_duplicate_confirmation_does_not_post_second_receipt(self):
-        view = SplitPicker(self.cog, interaction(), self.group, 600000, '')
+        view = SplitPicker(self.cog, interaction(), 600000, '')
+        view.selected = [1, 2]
         self.cog.repo.record.return_value = (SimpleNamespace(), False)
         confirm = interaction()
         await view.confirm.callback(confirm)
@@ -103,13 +110,16 @@ class DiscordDebtFlow(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(click.message.edit.call_args.kwargs['view'])
         view.stop()
 
-    async def test_group_setup_saves_and_old_selection_is_kept(self):
-        request = interaction()
-        view = GroupPicker(self.cog, request, self.group)
-        self.assertEqual(view.selected, [1, 2, 3])
-        await view.save.callback(request)
-        self.cog.repo.configure.assert_awaited_once_with(10, 20, 1, [1, 2, 3], manager=False)
-        self.assertTrue(view.is_finished())
+    async def test_next_bill_can_select_different_people_without_including_payer(self):
+        view = SplitPicker(self.cog, interaction(), 600000, '')
+        view.picker._values = [member(2), member(4), member(5)]
+        await view.choose(interaction())
+        self.assertEqual(view.selected, [2, 4, 5])
+        self.assertIn('200.000 ₫', view.embed().description)
+        next_view = SplitPicker(self.cog, interaction(), 600000, '')
+        self.assertEqual(next_view.selected, [])
+        view.stop()
+        next_view.stop()
 
     async def test_no_splits_large_ledger_into_discord_sized_fields(self):
         self.cog.repo.summary.return_value = {**{uid: -100000 for uid in range(1, 26)}, 30: 2500000}
@@ -121,9 +131,21 @@ class DiscordDebtFlow(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(len(embed), 6000)
         self.assertIn('1/2', embed.footer.text)
 
-    async def test_reconfigured_group_blocks_stale_preview(self):
-        view = SplitPicker(self.cog, interaction(), self.group, 600000, '')
-        self.cog.repo.record.side_effect = ValueError('Nhóm vừa thay đổi')
-        with self.assertRaisesRegex(ValueError, 'thay đổi'):
+    async def test_empty_selection_cannot_confirm(self):
+        view = SplitPicker(self.cog, interaction(), 600000, '')
+        with self.assertRaisesRegex(ValueError, 'Chọn'):
             await view.confirm.callback(interaction())
+        self.cog.repo.record.assert_not_awaited()
+        view.stop()
+
+    async def test_bot_outsider_and_duplicate_selections_are_rejected(self):
+        view = SplitPicker(self.cog, interaction(), 600000, '')
+        for selection in [[member(2, bot=True)], [member(2, guild_id=11)],
+                          [SimpleNamespace(id=2, bot=False)], [member(2), member(2)], []]:
+            view.picker._values = selection
+            with self.assertRaises(ValueError):
+                await view.choose(interaction())
+            self.assertEqual(view.selected, [])
+            self.assertTrue(view.confirm.disabled)
+        self.cog.repo.record.assert_not_awaited()
         view.stop()

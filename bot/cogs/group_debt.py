@@ -36,79 +36,53 @@ class DebtView(discord.ui.View):
         await self.cog.send_error(interaction, error)
 
 
-class GroupPicker(DebtView):
-    def __init__(self, cog, interaction, group):
-        super().__init__(cog, interaction.user.id)
-        self.selected = list(group.member_ids) if group else [interaction.user.id]
-        select = discord.ui.UserSelect(placeholder="Chọn lại toàn bộ thành viên của nhóm",
-                                       min_values=1, max_values=MAX_MEMBERS, row=0)
-        select.callback = self.choose
-        self.picker = select
-        self.add_item(select)
-
-    def embed(self):
-        return discord.Embed(title="Nhóm chia tiền của kênh", color=discord.Color.blue(),
-            description="Thành viên: " + ', '.join(map(mention, self.selected)) +
-            "\n\nChọn lại danh sách để thay đổi, rồi bấm **Lưu nhóm**."
-            "\nĐổi thành viên không xóa nợ hoặc đổi các khoản đã ghi.")
-
-    async def choose(self, interaction):
-        members = self.picker.values
-        if any(user.bot or not isinstance(user, discord.Member) or user.guild.id != interaction.guild_id for user in members):
-            raise ValueError("Chỉ chọn người thật trong server này.")
-        self.selected = sorted(user.id for user in members)
-        await interaction.response.edit_message(embed=self.embed(), view=self, allowed_mentions=NO_MENTIONS)
-
-    @discord.ui.button(label="Lưu nhóm", style=discord.ButtonStyle.success, row=1)
-    async def save(self, interaction, button):
-        await interaction.response.defer(ephemeral=True)
-        await self.cog.repo.configure(interaction.guild_id, interaction.channel_id,
-            interaction.user.id, self.selected, manager=await self.cog.is_manager(interaction))
-        await interaction.edit_original_response(content="Đã lưu nhóm. Dùng `/chia 600k` sau buổi chơi, `/no` để xem nợ.",
-                                                  embed=self.embed(), view=None, allowed_mentions=NO_MENTIONS)
-        self.stop()
-
-
 class SplitPicker(DebtView):
-    def __init__(self, cog, interaction, group, amount, note):
+    def __init__(self, cog, interaction, amount, note):
         super().__init__(cog, interaction.user.id)
         self.transaction_id = interaction.id
-        self.revision = group.revision
         self.amount = amount
         self.note = note
-        self.selected = list(group.member_ids)
-        options = []
-        for user_id in self.selected:
-            member = interaction.guild.get_member(user_id)
-            options.append(discord.SelectOption(label=(member.display_name if member else str(user_id))[:100],
-                                                value=str(user_id), default=True))
-        self.picker = discord.ui.Select(placeholder="Những người chơi hôm nay", options=options,
-                                        min_values=1, max_values=len(options), row=0)
+        self.selected = []
+        self.confirm.disabled = True
+        self.picker = discord.ui.UserSelect(placeholder="Chọn tất cả người tham gia buổi này, kể cả bạn nếu có",
+                                            min_values=1, max_values=MAX_MEMBERS, row=0)
         self.picker.callback = self.choose
         self.add_item(self.picker)
 
     def embed(self):
-        shares = split_shares(self.amount, self.selected)
-        text = f"Bạn ứng **{money(self.amount)}**. Chia cho **{len(shares)} người**:\n"
-        text += '\n'.join(f"{mention(uid)}: {money(value)}" for uid, value in shares.items())
+        text = f"Bạn ứng **{money(self.amount)}**.\n"
+        if self.selected:
+            shares = split_shares(self.amount, self.selected)
+            text += f"Chia đều cho **{len(shares)} người**:\n"
+            text += '\n'.join(f"{mention(uid)}: {money(value)}" for uid, value in shares.items())
+        else:
+            text += "Chọn **tất cả người tham gia buổi này**, kể cả bạn nếu bạn cũng tham gia."
         if self.note:
             text += "\nGhi chú: " + discord.utils.escape_markdown(self.note)
-        text += "\n\nBỏ chọn người không chơi. Nợ chỉ được ghi khi bấm **Xác nhận chia tiền**."
+        text += "\n\nNợ chỉ được ghi khi bấm **Xác nhận chia tiền**."
         return discord.Embed(title="Chia tiền buổi chơi", description=text, color=discord.Color.blue())
 
     async def choose(self, interaction):
-        self.selected = [int(value) for value in self.picker.values]
-        for option in self.picker.options:
-            option.default = int(option.value) in self.selected
+        members = self.picker.values
+        if any(not isinstance(user, discord.Member) or user.bot or user.guild.id != interaction.guild_id
+               for user in members):
+            raise ValueError("Chỉ chọn người thật trong server này.")
+        selected = sorted(user.id for user in members)
+        split_shares(self.amount, selected)
+        self.selected = selected
+        self.picker.default_values = members
+        self.confirm.disabled = False
         await interaction.response.edit_message(embed=self.embed(), view=self, allowed_mentions=NO_MENTIONS)
 
     @discord.ui.button(label="Xác nhận chia tiền", style=discord.ButtonStyle.success, row=1)
     async def confirm(self, interaction, button):
+        if not self.selected:
+            raise ValueError("Chọn những người tham gia trước khi xác nhận.")
         # Defer a message update so edit_original_response removes the original picker.
         await interaction.response.defer()
         transaction, created = await self.cog.repo.record(
             self.transaction_id, interaction.guild_id, interaction.channel_id, interaction.user.id,
-            'expense', self.amount, participants=list(self.selected), revision=self.revision, note=self.note)
+            'expense', self.amount, participants=list(self.selected), note=self.note)
         await interaction.edit_original_response(content="Đã ghi vào sổ nợ. Dùng `/no` để xem số dư.",
                                                   embed=None, view=None)
         self.stop()
@@ -209,16 +183,6 @@ class GroupDebtCog(commands.Cog):
         embed.set_footer(text=f"Giao dịch #{transaction.id}")
         await interaction.followup.send(embed=embed, view=UndoView(self), ephemeral=False, allowed_mentions=NO_MENTIONS)
 
-    @app_commands.command(name="nhom", description="Chọn thành viên thường chơi trong kênh này (thiết lập một lần)")
-    @app_commands.guild_only()
-    async def group(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        group = await self.repo.get_group(interaction.guild_id, interaction.channel_id)
-        if group and group.owner_id != interaction.user.id and not await self.is_manager(interaction):
-            raise ValueError("Chỉ người tạo nhóm hoặc quản trị viên được thay đổi nhóm.")
-        view = GroupPicker(self, interaction, group)
-        await interaction.followup.send(embed=view.embed(), view=view, ephemeral=True, allowed_mentions=NO_MENTIONS)
-
     @app_commands.command(name="chia", description="Bạn vừa ứng tiền: chọn người chơi rồi xác nhận để chia đều")
     @app_commands.describe(tien="Tiền bạn đã trả, ví dụ 600000 hoặc 600k", ghichu="Ghi chú tùy chọn")
     @app_commands.guild_only()
@@ -228,12 +192,7 @@ class GroupDebtCog(commands.Cog):
         if len(note) > 100:
             raise ValueError("Ghi chú tối đa 100 ký tự.")
         await interaction.response.defer(ephemeral=True)
-        group = await self.repo.get_group(interaction.guild_id, interaction.channel_id)
-        if not group:
-            raise ValueError("Dùng /nhom để chọn thành viên trước.")
-        if interaction.user.id not in group.member_ids:
-            raise ValueError("Bạn chưa thuộc nhóm. Nhờ người tạo nhóm cập nhật /nhom.")
-        view = SplitPicker(self, interaction, group, amount, note)
+        view = SplitPicker(self, interaction, amount, note)
         await interaction.followup.send(embed=view.embed(), view=view, ephemeral=True, allowed_mentions=NO_MENTIONS)
 
     @app_commands.command(name="no", description="Xem số nợ cộng dồn và gợi ý ai chuyển tiền cho ai")
@@ -251,7 +210,7 @@ class GroupDebtCog(commands.Cog):
         for uid, value in rows[offset:offset + 20]:
             status = f"được nhận **{money(value)}**" if value > 0 else f"cần trả **{money(-value)}**" if value < 0 else "hết nợ"
             lines.append(f"{mention(uid)}: {status}")
-        embed = discord.Embed(title="Sổ nợ nhóm của kênh", description='\n'.join(lines), color=discord.Color.blue())
+        embed = discord.Embed(title="Sổ nợ nhóm của kênh", description='\n'.join(lines) or "Chưa có giao dịch. Dùng /chia để chia tiền buổi đầu tiên.", color=discord.Color.blue())
         suggestions = [f"{mention(sender)} → {mention(recipient)}: **{money(amount)}**"
                        for sender, recipient, amount in transfers[offset:offset + 20]]
         # Keep each field under Discord's 1024-character limit.

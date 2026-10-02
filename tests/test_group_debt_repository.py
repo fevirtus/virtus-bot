@@ -30,7 +30,6 @@ class SharedLedger(unittest.IsolatedAsyncioTestCase):
                 DebtGroup.__table__, DebtTransaction.__table__, DebtEntry.__table__]))
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
         self.repo = GroupDebtRepository(self.sessions)
-        self.group = await self.repo.configure(10, 20, 1, [1, 2, 3])
 
     async def asyncTearDown(self):
         if self.schema:
@@ -38,10 +37,9 @@ class SharedLedger(unittest.IsolatedAsyncioTestCase):
                 await conn.execute(DropSchema(self.schema, cascade=True))
         await self.engine.dispose()
 
-    async def expense(self, transaction_id=100, payer=1, amount=600000, members=None, revision=None):
+    async def expense(self, transaction_id=100, payer=1, amount=600000, members=None):
         return await self.repo.record(transaction_id, 10, 20, payer, 'expense', amount,
-            participants=members if members is not None else [1, 2, 3],
-            revision=self.group.revision if revision is None else revision)
+            participants=members if members is not None else [1, 2, 3])
 
     async def test_billiards_example_with_next_day_and_partial_payment(self):
         await self.expense()
@@ -76,22 +74,20 @@ class SharedLedger(unittest.IsolatedAsyncioTestCase):
 
     async def test_selected_subset_only_is_charged(self):
         await self.expense(amount=120001, members=[2, 1])
-        self.assertEqual(await self.repo.summary(10, 20), {1: 60000, 2: -60000, 3: 0})
+        self.assertEqual(await self.repo.summary(10, 20), {1: 60000, 2: -60000})
 
-    async def test_changed_membership_does_not_erase_old_debt(self):
+    async def test_different_participants_and_payer_preserve_old_debt(self):
         await self.expense()
-        await self.repo.configure(10, 20, 1, [1, 2, 4])
+        await self.expense(101, payer=4, amount=300000, members=[1, 4])
         balances = await self.repo.summary(10, 20)
-        self.assertEqual(balances, {1: 400000, 2: -200000, 3: -200000, 4: 0})
-        # Removed members may still settle their old debt.
-        await self.repo.record(101, 10, 20, 3, 'payment', 200000, recipient_id=1)
+        self.assertEqual(balances, {1: 250000, 2: -200000, 3: -200000, 4: 150000})
+        # People absent from the next bill can still settle their old debt.
+        await self.repo.record(102, 10, 20, 3, 'payment', 200000, recipient_id=1)
         self.assertEqual((await self.repo.summary(10, 20))[3], 0)
-        with self.assertRaisesRegex(ValueError, 'thay đổi'):
-            await self.expense(102, members=[1, 2])
-        self.assertEqual(len(await self.repo.history(10, 20)), 2)
+        self.assertEqual(len(await self.repo.history(10, 20)), 3)
 
     async def test_invalid_transactions_roll_back_completely(self):
-        for actor, members in [(9, [1, 2]), (1, [1, 9]), (1, [1, 1]), (1, [])]:
+        for actor, members in [(1, [1, 1]), (1, []), (1, list(range(1, 27)))]:
             with self.assertRaises(ValueError):
                 await self.expense(payer=actor, members=members)
         with self.assertRaises(ValueError):
@@ -99,28 +95,41 @@ class SharedLedger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.repo.history(10, 20), [])
         async with self.sessions() as session:
             self.assertEqual(list(await session.scalars(select(DebtEntry))), [])
+            self.assertEqual(list(await session.scalars(select(DebtGroup))), [])
 
-    async def test_only_owner_or_manager_can_change_group_and_author_can_undo(self):
-        with self.assertRaises(ValueError):
-            await self.repo.configure(10, 20, 2, [1, 2])
+    async def test_only_author_or_manager_can_undo(self):
         await self.expense()
         with self.assertRaises(ValueError):
             await self.repo.undo(100, 10, 20, 2)
         self.assertEqual((await self.repo.summary(10, 20))[1], 400000)
-        await self.repo.configure(10, 20, 9, [1, 2, 3], manager=True)
         self.assertTrue(await self.repo.undo(100, 10, 20, 9, manager=True))
 
     async def test_server_and_channel_ledgers_are_isolated(self):
-        await self.repo.configure(10, 21, 1, [1, 2, 3])
-        await self.repo.configure(11, 20, 1, [1, 2, 3])
         await self.expense()
         for guild_id, channel_id in [(10, 21), (11, 20)]:
-            self.assertEqual(await self.repo.summary(guild_id, channel_id), {1: 0, 2: 0, 3: 0})
+            self.assertEqual(await self.repo.summary(guild_id, channel_id), {})
             self.assertEqual(await self.repo.history(guild_id, channel_id), [])
             with self.assertRaises(ValueError):
                 await self.repo.undo(100, guild_id, channel_id, 1, manager=True)
             with self.assertRaises(ValueError):
-                await self.repo.record(100, guild_id, channel_id, 1, 'expense', 10, participants=[1], revision=1)
+                await self.repo.record(100, guild_id, channel_id, 1, 'expense', 10, participants=[1])
+
+    async def test_existing_group_and_history_work_without_setup_or_owner_restrictions(self):
+        # Legacy rows remain readable; new bills use their own participants.
+        async with self.sessions() as session, session.begin():
+            session.add(DebtGroup(guild_id=10, channel_id=20, owner_id=1,
+                                  member_ids=[1, 2, 3], revision=7))
+        await self.expense()
+        await self.expense(101, payer=4, amount=120000, members=[2, 4])
+        self.assertEqual(await self.repo.summary(10, 20),
+                         {1: 400000, 2: -260000, 3: -200000, 4: 60000})
+        await self.repo.undo(100, 10, 20, 1)
+        self.assertEqual(await self.repo.summary(10, 20), {1: 0, 2: -60000, 3: 0, 4: 60000})
+        self.assertEqual(len(await self.repo.history(10, 20)), 2)
+
+    async def test_payer_can_pay_for_others_without_sharing_bill(self):
+        await self.expense(payer=9, amount=120000, members=[2, 4])
+        self.assertEqual(await self.repo.summary(10, 20), {9: 120000, 2: -60000, 4: -60000})
 
     async def test_new_repository_can_read_history_and_balances(self):
         await self.expense()
