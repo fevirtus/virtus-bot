@@ -1,9 +1,7 @@
 from datetime import datetime, timezone
-from typing import Optional
-
 from sqlalchemy import func, select
 from models.group_debt import DebtEntry, DebtGroup, DebtTransaction
-from services.group_debt import MAX_MEMBERS, expense_deltas, payment_deltas, split_shares
+from services.group_debt import expense_deltas, payment_deltas, split_shares
 
 
 class GroupDebtRepository:
@@ -13,39 +11,25 @@ class GroupDebtRepository:
             session_maker = postgres.get_sessionmaker()
         self.Session = session_maker
 
-    async def get_group(self, guild_id: int, channel_id: int) -> Optional[DebtGroup]:
-        async with self.Session() as session:
-            return await session.get(DebtGroup, (guild_id, channel_id))
-
     async def _lock_group(self, session, guild_id, channel_id):
         group = await session.scalar(select(DebtGroup).where(
             DebtGroup.guild_id == guild_id, DebtGroup.channel_id == channel_id
         ).with_for_update())
         if group is None:
-            raise ValueError("Kênh này chưa có nhóm. Dùng /nhom để chọn thành viên trước.")
+            raise ValueError("Kênh này chưa có giao dịch. Dùng /chia để ghi khoản đầu tiên.")
         return group
 
-    async def configure(self, guild_id, channel_id, actor_id, members, manager=False):
-        members = sorted(set(members))
-        if not members or len(members) > MAX_MEMBERS:
-            raise ValueError("Chọn từ 1 đến 25 thành viên.")
-        async with self.Session() as session, session.begin():
-            # Concurrent first setup is safe; subsequent changes serialize on the group row.
-            if session.bind.dialect.name == 'sqlite':
-                from sqlalchemy.dialects.sqlite import insert
-            else:
-                from sqlalchemy.dialects.postgresql import insert
-            await session.execute(insert(DebtGroup).values(
-                guild_id=guild_id, channel_id=channel_id, owner_id=actor_id,
-                member_ids=members, revision=1,
-            ).on_conflict_do_nothing(index_elements=['guild_id', 'channel_id']))
-            group = await self._lock_group(session, guild_id, channel_id)
-            if group.owner_id != actor_id and not manager:
-                raise ValueError("Chỉ người tạo nhóm hoặc quản trị viên được thay đổi nhóm.")
-            if group.member_ids != members:
-                group.member_ids = members
-                group.revision += 1
-            return group
+    async def _ensure_ledger(self, session, guild_id, channel_id, actor_id):
+        # Retain the existing table/FK as a channel lock, with no roster setup.
+        # Concurrent first bills safely create one row before acquiring its lock.
+        if session.bind.dialect.name == 'sqlite':
+            from sqlalchemy.dialects.sqlite import insert
+        else:
+            from sqlalchemy.dialects.postgresql import insert
+        await session.execute(insert(DebtGroup).values(
+            guild_id=guild_id, channel_id=channel_id, owner_id=actor_id,
+            member_ids=[], revision=1,
+        ).on_conflict_do_nothing(index_elements=['guild_id', 'channel_id']))
 
     async def _balances(self, session, guild_id, channel_id):
         rows = await session.execute(select(DebtEntry.user_id, func.sum(DebtEntry.delta)).join(
@@ -57,18 +41,18 @@ class GroupDebtRepository:
     async def summary(self, guild_id, channel_id):
         async with self.Session() as session:
             group = await session.get(DebtGroup, (guild_id, channel_id))
-            if not group:
-                raise ValueError("Kênh này chưa có nhóm. Dùng /nhom trước.")
             balances = await self._balances(session, guild_id, channel_id)
-            for user_id in group.member_ids:
+            for user_id in group.member_ids if group else []:
                 balances.setdefault(user_id, 0)
             return balances
 
     async def record(self, transaction_id, guild_id, channel_id, actor_id, kind, amount,
-                     participants=None, revision=None, recipient_id=None, note=""):
+                     participants=None, recipient_id=None, note=""):
         if kind not in ('expense', 'payment') or len(note) > 100:
             raise ValueError("Giao dịch không hợp lệ; ghi chú tối đa 100 ký tự.")
         async with self.Session() as session, session.begin():
+            if kind == 'expense':
+                await self._ensure_ledger(session, guild_id, channel_id, actor_id)
             group = await self._lock_group(session, guild_id, channel_id)
             existing = await session.get(DebtTransaction, transaction_id)
             if existing:
@@ -77,17 +61,11 @@ class GroupDebtRepository:
                 return existing, False
             balances = await self._balances(session, guild_id, channel_id)
             if kind == 'expense':
-                if actor_id not in group.member_ids:
-                    raise ValueError("Bạn chưa thuộc nhóm. Nhờ người tạo nhóm cập nhật /nhom.")
-                if revision != group.revision:
-                    raise ValueError("Nhóm vừa thay đổi. Dùng /chia lại để chọn đúng thành viên.")
                 shares = split_shares(amount, participants or [])
-                if not set(shares).issubset(group.member_ids):
-                    raise ValueError("Người chia tiền phải thuộc nhóm hiện tại.")
                 deltas = expense_deltas(amount, actor_id, shares)
+                # Keep zero balances visible after undo, including legacy members.
+                group.member_ids = sorted(set(group.member_ids) | set(deltas))
             else:
-                if actor_id not in group.member_ids and actor_id not in balances:
-                    raise ValueError("Bạn chưa thuộc sổ nợ của nhóm này.")
                 shares = {}
                 deltas = payment_deltas(amount, actor_id, recipient_id, balances)
             transaction = DebtTransaction(
