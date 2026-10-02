@@ -34,6 +34,7 @@ class VirtusBot(commands.Bot):
         
         # Load Cogs
         await self.load_extension('bot.cogs.home_debt')
+        await self.load_extension('bot.cogs.group_debt')
         await self.load_extension('bot.cogs.score')
         await self.load_extension('bot.cogs.noi_tu')
         await self.load_extension('bot.cogs.football')

@@ -8,6 +8,7 @@ Một Discord bot mã nguồn mở tích hợp Admin Dashboard để quản lý 
 -   **Dynamic Configuration**: Thay đổi cấu hình (Channel ID, Admin ID) mà không cần restart.
 -   **Modules (Cogs)**:
     -   `HomeDebt`: Quản lý chi tiêu chung.
+    -   `GroupDebt`: Chia tiền nhóm bạn và cộng dồn nợ theo kênh.
     -   `NoiTu`: Trò chơi nối từ.
     -   `Score`: Hệ thống điểm kinh nghiệm.
 -   **Tech Stack**: Python, Discord.py, FastAPI, SQLAlchemy (Async), PostgreSQL.
@@ -74,6 +75,54 @@ virtus-bot/
 ├── main.py             # Entry point (Runs Bot + Web)
 └── ...
 ```
+
+## Chia tiền nhóm bạn (Group Debt)
+
+Module riêng với `HomeDebt` (tiền nhà); mỗi kênh hoặc thread có một sổ nợ riêng.
+
+1. Trong Admin Dashboard, chọn server và bật **Group Debt**.
+   `CHANNEL_GROUP_DEBT_IDS` là danh sách ID kênh được phép, cách nhau bằng dấu phẩy.
+   Để trống để cho phép mọi kênh. Thread dùng ID của chính thread đó.
+2. Dùng `/nhom`, chọn các thành viên thường chơi, bấm **Lưu nhóm**. Thiết lập một lần,
+   tối đa 25 người. Chỉ người tạo nhóm, người có quyền Manage Server hoặc người trong
+   `ADMIN_IDS` của server được đổi danh sách. Nợ cũ vẫn được giữ khi đổi thành viên.
+3. Sau buổi chơi, người ứng tiền dùng `/chia tien:600k`. Bot mặc định chọn toàn bộ nhóm;
+   bỏ chọn người không chơi rồi bấm **Xác nhận chia tiền**. Có thể thêm `ghichu`.
+   Người ứng cũng chịu phần của mình nếu được chọn. Form có hiệu lực 5 phút;
+   hết hạn thì dùng lại lệnh. Nếu nhóm vừa thay đổi, bot yêu cầu chọn lại trước khi ghi.
+4. Dùng `/no` để xem số dư và gợi ý ai chuyển cho ai. Đây là nợ **ròng trong nhóm**,
+   tự bù trừ giữa các lần ứng tiền, không phải nợ cố định giữa từng cặp người.
+5. Sau khi chuyển thật, người trả dùng `/tra nguoi:@An tien:200k` để giảm nợ ngay,
+   không cần người nhận duyệt. Được trả từng phần; bot từ chối trả vượt số nợ ròng
+   của người trả hoặc số được nhận của người nhận. Lệnh chỉ ghi sổ, không chuyển tiền.
+6. Nhập nhầm thì bấm **Hoàn tác** trên tin nhắn kết quả, hoặc dùng `/lichsu` lấy mã rồi
+   `/hoantac ma:<mã>`. Bạn chỉ hoàn tác được khoản mình tạo; quản trị viên có thể hỗ trợ.
+   Lịch sử giữ khoản đã hoàn tác. Hoàn tác đảo tác động của khoản đó trên số dư hiện tại,
+   kể cả khi đã có giao dịch mới. Nút hoàn tác dùng được sau khi bot restart.
+
+Tiền nhập bằng đồng (`600000`) hoặc hậu tố `k` (`600k`, `150.5k`);
+không dùng dấu phân cách hàng nghìn trong số nhập. Bot hiển thị `600.000 ₫`.
+Phần dư khi chia tiền lẻ được phân bổ theo thứ tự Discord user ID để tổng luôn khớp.
+`/lichsu trang:2` xem 10 giao dịch tiếp theo; `/no trang:2` xem tiếp nếu có nhiều thành viên cũ.
+
+Ví dụ ba người: bạn ứng 600k → bạn được nhận 400k, An và Bình cần trả 200k/người.
+Hôm sau An ứng 300k → bạn được nhận 300k, An hết nợ, Bình cần trả 300k.
+Bình trả bạn 200k → bạn còn được nhận 100k, Bình còn cần trả 100k.
+
+Các bảng `group_debt_*` được tạo tự động khi khởi động bằng cơ chế hiện có.
+Không cần thay đổi cấu trúc bảng `home_debt` hoặc chuyển số nợ tiền nhà sang sổ nhóm.
+
+### Kiểm thử
+
+```bash
+uv run --frozen --with 'aiosqlite>=0.20.0,<1' python -m unittest discover -s tests -v
+```
+
+Hoặc cài thư viện dự án và `pip install -r requirements-test.txt` trong môi trường Python riêng.
+Mặc định kiểm thử sổ nợ bằng SQLite tạm trong bộ nhớ. Để kiểm thử thêm khóa hàng
+và các thao tác đồng thời, đặt `GROUP_DEBT_TEST_POSTGRES_URL` tới **database kiểm thử**
+theo dạng `postgresql+asyncpg://...`. Mỗi test tạo schema tạm riêng rồi xóa schema đó.
+GitHub Actions chạy bộ kiểm thử này với PostgreSQL 15, trước khi build/publish image.
 
 ## Docker Support
 

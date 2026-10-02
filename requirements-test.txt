@@ -1,0 +1,2 @@
+# Only needed for isolated database tests; production continues using PostgreSQL.
+aiosqlite>=0.20.0,<1

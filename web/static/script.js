@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
             keys: ['CHANNEL_HOME_DEBT_ID'],
             validation: 'channel_list'
         },
+        'group_debt': {
+            keys: ['CHANNEL_GROUP_DEBT_IDS'],
+            validation: 'channel_list'
+        },
         'noi_tu': {
             keys: ['CHANNEL_NOI_TU_IDS'],
             validation: 'channel_list'
@@ -270,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Tab 3: Services ---
     function renderServicesTab() {
         servicesContainer.innerHTML = '';
-        const knownServices = ['home_debt', 'noi_tu', 'score', 'football'];
+        const knownServices = ['home_debt', 'group_debt', 'noi_tu', 'score', 'football'];
 
         knownServices.forEach(serviceName => {
             const feature = currentFeatures.find(f => f.feature_name === serviceName);

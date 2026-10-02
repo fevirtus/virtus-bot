@@ -127,7 +127,7 @@ async def search_football_teams(guild_id: int, query: str, request: Request):
 async def get_guild_features(guild_id: int):
     # List of known features
     # List of known features
-    known_features = ["home_debt", "score", "noi_tu", "football"]
+    known_features = ["home_debt", "group_debt", "score", "noi_tu", "football"]
     result = []
     
     # Get all active features from DB
